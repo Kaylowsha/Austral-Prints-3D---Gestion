@@ -12,7 +12,7 @@ import KanbanBoard from '@/pages/Orders/KanbanBoard'
 import FinancePage from '@/pages/Finance/FinancePage'
 
 // Placeholders to avoid build errors if files missing
-const OrdersPage = () => <div className="p-4">Pedidos (En construcción)</div>
+// const OrdersPage = () => <div className="p-4">Pedidos (En construcción)</div>
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)

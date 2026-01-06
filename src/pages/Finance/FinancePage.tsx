@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import {
     TrendingUp,
     TrendingDown,
     DollarSign,
     ArrowUpRight,
     ArrowDownRight,
-    PieChart as PieChartIcon,
     ShoppingBag,
-    Zap,
-    Wrench,
-    Layers
+    Zap
 } from 'lucide-react'
 import IncomeDialog from './IncomeDialog'
 import ExpenseDialog from './ExpenseDialog'
@@ -30,7 +26,7 @@ import {
 } from 'recharts'
 
 export default function FinancePage() {
-    const [loading, setLoading] = useState(true)
+    const [, setLoading] = useState(true)
     const [stats, setStats] = useState({
         income: 0,
         expenses: 0,
@@ -214,7 +210,7 @@ export default function FinancePage() {
                                     paddingAngle={5}
                                     dataKey="value"
                                 >
-                                    {categoryData.map((entry, index) => (
+                                    {categoryData.map((_, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
