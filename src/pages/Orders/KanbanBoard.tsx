@@ -1,0 +1,132 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Loader2, ArrowRight } from 'lucide-react'
+import OrderDialog from './OrderDialog'
+
+// Define columns
+const COLUMNS = [
+    { id: 'pendiente', label: 'Pendiente', color: 'bg-yellow-100 text-yellow-800' },
+    { id: 'en_proceso', label: 'Imprimiendo', color: 'bg-blue-100 text-blue-800' },
+    { id: 'terminado', label: 'Listo', color: 'bg-green-100 text-green-800' },
+    { id: 'entregado', label: 'Entregado', color: 'bg-gray-100 text-gray-800' }
+]
+
+export default function KanbanBoard() {
+    const [orders, setOrders] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        fetchOrders()
+    }, [])
+
+    const fetchOrders = async () => {
+        setLoading(true)
+        const { data, error } = await supabase
+            .from('orders')
+            .select(`
+        *,
+        products (name)
+      `)
+            .neq('status', 'cancelado') // Don't show cancelled for now
+            .order('created_at', { ascending: false })
+
+        if (!error && data) {
+            setOrders(data)
+        }
+        setLoading(false)
+    }
+
+    const updateStatus = async (orderId: string, newStatus: string) => {
+        // Optimistic update
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
+
+        const { error } = await supabase
+            .from('orders')
+            .update({ status: newStatus })
+            .eq('id', orderId)
+
+        if (error) {
+            // Revert if error
+            fetchOrders()
+        }
+    }
+
+    if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>
+
+    return (
+        <div className="h-full flex flex-col p-4 md:p-6 bg-slate-50 min-h-screen">
+            <header className="mb-6 flex justify-between items-start">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900">Tablero de Pedidos</h1>
+                    <p className="text-slate-500 text-sm">Gestiona el flujo de trabajo</p>
+                </div>
+                <OrderDialog onSuccess={fetchOrders} />
+            </header>
+
+            {/* Kanban Grid */}
+            <div className="flex-1 overflow-x-auto">
+                <div className="flex gap-4 min-w-[1000px] h-full pb-4">
+                    {COLUMNS.map(col => (
+                        <div key={col.id} className="flex-1 min-w-[250px] bg-slate-100/50 rounded-xl p-3 border border-slate-200 flex flex-col max-h-[70vh]">
+                            <div className={`mb-3 px-3 py-2 rounded-lg font-semibold text-sm ${col.color} flex justify-between items-center`}>
+                                {col.label}
+                                <span className="bg-white/50 px-2 rounded-full text-xs">
+                                    {orders.filter(o => o.status === col.id).length}
+                                </span>
+                            </div>
+
+                            <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
+                                {orders.filter(o => o.status === col.id).map(order => (
+                                    <Card key={order.id} className="cursor-pointer hover:shadow-md transition-all shadow-sm bg-white border-0">
+                                        <CardContent className="p-3 space-y-2">
+                                            <div className="flex justify-between items-start">
+                                                <p className="font-semibold text-sm text-slate-800 line-clamp-2">
+                                                    {order.description || order.products?.name || 'Sin descripción'}
+                                                </p>
+                                            </div>
+                                            <div className="flex justify-between items-end text-xs text-slate-400">
+                                                <div className="flex flex-col">
+                                                    <span>{new Date(order.created_at).toLocaleDateString()}</span>
+                                                    {order.deadline && (
+                                                        <span className="text-red-500 font-medium">Entrega: {new Date(order.deadline).toLocaleDateString()}</span>
+                                                    )}
+                                                </div>
+                                                <span className="font-mono text-slate-600 font-bold">${order.price?.toLocaleString() || 0}</span>
+                                            </div>
+
+                                            {/* Action Buttons (Mobile Friendly) */}
+                                            <div className="pt-2 flex justify-end gap-1">
+                                                {col.id !== 'entregado' && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        className="h-6 text-[10px] px-2"
+                                                        onClick={() => {
+                                                            const nextIndex = COLUMNS.findIndex(c => c.id === col.id) + 1
+                                                            if (nextIndex < COLUMNS.length) {
+                                                                updateStatus(order.id, COLUMNS[nextIndex].id)
+                                                            }
+                                                        }}
+                                                    >
+                                                        Avanzar <ArrowRight size={10} className="ml-1" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                                {orders.filter(o => o.status === col.id).length === 0 && (
+                                    <div className="text-center py-10 text-slate-300 text-xs italic">
+                                        Vacío
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    )
+}
