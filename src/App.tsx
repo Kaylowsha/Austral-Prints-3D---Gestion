@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { useState, useEffect } from 'react'
 import Login from '@/pages/Login'
@@ -38,7 +38,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/login" element={!session ? <Login /> : <Navigate to="/" replace />} />
 
@@ -55,7 +55,7 @@ function App() {
         )}
       </Routes>
       <Toaster />
-    </BrowserRouter>
+    </Router>
   )
 }
 
