@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
-import { Package, Plus, Trash2, Droplets } from 'lucide-react'
+import { Package, Plus, Trash2, Droplets, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import ConfirmDialog from '@/components/ConfirmDialog'
 import {
     BarChart,
     Bar,
@@ -31,6 +33,9 @@ export default function InventoryPage() {
         material_type: 'PLA',
         stock_grams: ''
     })
+    const [searchQuery, setSearchQuery] = useState('')
+    const [filterType, setFilterType] = useState('Todos')
+    const [itemToDelete, setItemToDelete] = useState<string | null>(null)
 
     useEffect(() => {
         fetchInitialData()
@@ -72,11 +77,26 @@ export default function InventoryPage() {
         }
     }
 
-    const deleteItem = async (id: string) => {
-        if (!confirm('¿Eliminar este material?')) return
-        await supabase.from('inventory').delete().eq('id', id)
+    const deleteItem = async () => {
+        if (!itemToDelete) return
+        await supabase.from('inventory').delete().eq('id', itemToDelete)
+        setItemToDelete(null)
         fetchInitialData()
+        toast.success('Material eliminado')
     }
+
+    const filteredItems = items.filter(item => {
+        const matchesSearch =
+            item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.color.toLowerCase().includes(searchQuery.toLowerCase())
+
+        const matchesType = filterType === 'Todos' || item.material_type === filterType
+
+        return matchesSearch && matchesType
+    })
+
+    const materialTypes = ['Todos', ...new Set(items.map(i => i.material_type))]
 
     const COLORS = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
 
@@ -128,6 +148,44 @@ export default function InventoryPage() {
                     </DialogContent>
                 </Dialog>
             </header>
+
+            {/* Search and Filters */}
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="relative w-full md:max-w-md group">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                    <Input
+                        placeholder="Buscar por nombre, marca o color..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 pr-10 border-slate-200 focus:border-indigo-300 focus:ring-indigo-100 rounded-xl"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+                        >
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto">
+                    {materialTypes.map(type => (
+                        <Button
+                            key={type}
+                            variant={filterType === type ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setFilterType(type)}
+                            className={cn(
+                                "rounded-full px-4 font-bold text-xs uppercase tracking-wider",
+                                filterType === type ? "bg-slate-900" : "text-slate-500 border-slate-200"
+                            )}
+                        >
+                            {type}
+                        </Button>
+                    ))}
+                </div>
+            </div>
 
             {!loading && consumptionStats.length > 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -188,9 +246,9 @@ export default function InventoryPage() {
             )}
 
             <div className="space-y-4">
-                <h2 className="text-xl font-bold text-slate-800">Tus Rollos en Stock</h2>
+                <h2 className="text-xl font-bold text-slate-800">Tus Rollos en Stock ({filteredItems.length})</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {items.map(item => (
+                    {filteredItems.map(item => (
                         <Card key={item.id} className="overflow-hidden border-slate-200 relative group bg-white shadow-sm hover:shadow-md transition-all">
                             <div className={`absolute top-0 left-0 w-1.5 h-full ${item.stock_grams < 150 ? 'bg-rose-500 animate-pulse' : 'bg-indigo-500'}`} />
                             <CardContent className="p-5">
@@ -204,7 +262,7 @@ export default function InventoryPage() {
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.brand} • {item.material_type}</p>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => deleteItem(item.id)} className="text-slate-200 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all">
+                                    <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item.id)} className="text-slate-200 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all">
                                         <Trash2 size={16} />
                                     </Button>
                                 </div>
@@ -234,23 +292,25 @@ export default function InventoryPage() {
                 </div>
             </div>
 
-            {items.length === 0 && !loading && (
+            {filteredItems.length === 0 && !loading && (
                 <div className="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-slate-200 shadow-inner">
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
                         <Package className="text-slate-200" size={40} />
                     </div>
-                    <p className="text-slate-400 font-bold uppercase tracking-widest">Sin materiales registrados</p>
-                    <p className="text-xs text-slate-300 mt-1">Agrega tu primer rollo de filamento para empezar el análisis.</p>
+                    <p className="text-slate-400 font-bold uppercase tracking-widest">Sin materiales encontrados</p>
+                    <p className="text-xs text-slate-300 mt-1">Intenta con otros términos de búsqueda o filtros.</p>
                 </div>
             )}
-        </div>
-    )
-}
 
-function Badge({ children, className }: any) {
-    return (
-        <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2", className)}>
-            {children}
-        </span>
+            <ConfirmDialog
+                open={!!itemToDelete}
+                onOpenChange={(open) => !open && setItemToDelete(null)}
+                onConfirm={deleteItem}
+                title="¿Eliminar Material?"
+                description="Esta acción no se puede deshacer. Se eliminará el registro del rollo y su stock asociado."
+                confirmText="Eliminar"
+                variant="destructive"
+            />
+        </div>
     )
 }
