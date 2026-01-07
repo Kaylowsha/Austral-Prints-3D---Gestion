@@ -81,8 +81,9 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
                 {
                     product_id: formData.mode === 'producto' ? formData.product_id : null,
                     description: formData.description,
-                    price: Number(formData.price),
-                    cost: formData.mode === 'producto' ? estimatedCost : 0,
+                    price: Number(formData.price) * Number(formData.quantity || 1),
+                    cost: formData.mode === 'producto' ? estimatedCost * Number(formData.quantity || 1) : 0,
+                    quantity: Number(formData.quantity || 1),
                     status: 'terminado', // Immediate income
                     created_at: new Date().toISOString(),
                     date: formData.date
@@ -205,7 +206,7 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label>Monto</Label>
+                            <Label>Precio Unitario</Label>
                             <Input
                                 type="number"
                                 value={formData.price}
@@ -213,12 +214,30 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
                             />
                         </div>
                         <div className="grid gap-2">
+                            <Label>Cantidad</Label>
+                            <Input
+                                type="number"
+                                min="1"
+                                value={formData.quantity}
+                                onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
                             <Label>Fecha</Label>
                             <Input
                                 type="date"
                                 value={formData.date}
                                 onChange={e => setFormData({ ...formData, date: e.target.value })}
                             />
+                        </div>
+                        <div className="bg-green-50 p-2 rounded-lg border border-dashed border-green-200 flex flex-col justify-center items-center">
+                            <span className="text-[10px] font-bold text-green-600 uppercase">Total Venta</span>
+                            <span className="text-lg font-black text-green-700">
+                                ${(Number(formData.price || 0) * Number(formData.quantity || 1)).toLocaleString('es-CL')}
+                            </span>
                         </div>
                     </div>
 

@@ -38,7 +38,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
         inventory_id: '',
         description: '',
         price: '',
-        deadline: ''
+        deadline: '',
+        quantity: '1'
     })
 
     useEffect(() => {
@@ -91,7 +92,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     inventory_id: formData.inventory_id || null, // Link to specific filament
                     description: formData.description,
                     price: Number(formData.price),
-                    cost: estimatedCost,
+                    cost: estimatedCost * Number(formData.quantity || 1),
+                    quantity: Number(formData.quantity || 1),
                     deadline: formData.deadline || null,
                     status: 'pendiente',
                     created_at: new Date().toISOString()
@@ -111,7 +113,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
 
             toast.success('Pedido registrado')
             setOpen(false)
-            setFormData({ product_id: '', inventory_id: '', description: '', price: '', deadline: '' })
+            setFormData({ product_id: '', inventory_id: '', description: '', price: '', deadline: '', quantity: '1' })
             if (onSuccess) onSuccess()
 
         } catch (error: any) {
@@ -182,15 +184,27 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                         <div className="grid gap-2">
-                            <Label>Precio Pactado</Label>
+                            <Label>Cant.</Label>
+                            <Input
+                                type="number"
+                                min="1"
+                                value={formData.quantity}
+                                onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+                            />
+                        </div>
+                        <div className="grid gap-2 col-span-2">
+                            <Label>Precio Pactado (Unitario)</Label>
                             <Input
                                 type="number"
                                 value={formData.price}
                                 onChange={e => setFormData({ ...formData, price: e.target.value })}
                             />
                         </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label>Fecha Entrega</Label>
                             <Input
@@ -198,6 +212,12 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                                 value={formData.deadline}
                                 onChange={e => setFormData({ ...formData, deadline: e.target.value })}
                             />
+                        </div>
+                        <div className="bg-slate-50 p-2 rounded-lg border border-dashed border-slate-200 flex flex-col justify-center items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Total Estimado</span>
+                            <span className="text-lg font-black text-indigo-600">
+                                ${(Number(formData.price || 0) * Number(formData.quantity || 1)).toLocaleString('es-CL')}
+                            </span>
                         </div>
                     </div>
 

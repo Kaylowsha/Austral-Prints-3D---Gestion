@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import OrderDialog from './OrderDialog'
+import ConfirmDialog from '@/components/ConfirmDialog'
+import { XCircle } from 'lucide-react'
 
 // Define columns
 const COLUMNS = [
@@ -85,14 +87,15 @@ export default function KanbanBoard() {
                                 .maybeSingle()
 
                             if (filament) {
-                                // 4. Deduct weight
-                                const newStock = Math.max(0, (filament.stock_grams || 0) - product.weight_grams)
+                                // 4. Deduct weight (multiplied by quantity)
+                                const totalWeightDraft = product.weight_grams * (order.quantity || 1)
+                                const newStock = Math.max(0, (filament.stock_grams || 0) - totalWeightDraft)
                                 await supabase
                                     .from('inventory')
                                     .update({ stock_grams: newStock })
                                     .eq('id', targetInventoryId)
 
-                                toast.success(`Stock descontado: -${product.weight_grams}g`)
+                                toast.success(`Stock descontado: -${totalWeightDraft}g (${order.quantity || 1} unidades)`)
                             }
                         }
                     }
@@ -136,6 +139,11 @@ export default function KanbanBoard() {
                                                 <p className="font-semibold text-sm text-slate-800 line-clamp-2">
                                                     {order.description || order.products?.name || 'Sin descripción'}
                                                 </p>
+                                                {(order.quantity > 1) && (
+                                                    <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-1.5 py-0.5 rounded-md">
+                                                        x{order.quantity}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="flex justify-between items-end text-xs text-slate-400">
                                                 <div className="flex flex-col">
@@ -148,7 +156,22 @@ export default function KanbanBoard() {
                                             </div>
 
                                             {/* Action Buttons (Mobile Friendly) */}
-                                            <div className="pt-2 flex justify-end gap-1">
+                                            <div className="pt-2 flex justify-between items-center gap-1">
+                                                <ConfirmDialog
+                                                    title="¿Anular pedido?"
+                                                    description="El pedido se marcará como cancelado y no aparecerá en el tablero."
+                                                    onConfirm={() => updateStatus(order.id, 'cancelado')}
+                                                    trigger={
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-6 text-[10px] px-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50"
+                                                        >
+                                                            <XCircle size={12} className="mr-1" /> Anular
+                                                        </Button>
+                                                    }
+                                                />
+
                                                 {col.id !== 'entregado' && (
                                                     <Button
                                                         size="sm"
