@@ -24,8 +24,8 @@ export default function KanbanBoard() {
         fetchOrders()
     }, [])
 
-    const fetchOrders = async () => {
-        setLoading(true)
+    const fetchOrders = async (silent = false) => {
+        if (!silent) setLoading(true)
         const { data, error } = await supabase
             .from('orders')
             .select(`
@@ -38,26 +38,30 @@ export default function KanbanBoard() {
         if (!error && data) {
             setOrders(data)
         }
-        setLoading(false)
+        if (!silent) setLoading(false)
     }
 
     const updateStatus = async (orderId: string, newStatus: string) => {
-        // Optimistic update
+        // 1. Snapshot the current orders for possible rollback
+        const previousOrders = [...orders]
+
+        // 2. Optimistic update
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
 
         try {
+            // 3. Persist to DB
             const { error } = await supabase
                 .from('orders')
                 .update({ status: newStatus })
                 .eq('id', orderId)
+                .select()
 
             if (error) throw error
 
-            // Inventory Deduction Logic
+            // 4. Inventory Deduction Logic (ONLY if moving TO 'terminado')
             if (newStatus === 'terminado') {
-                const order = orders.find(o => o.id === orderId)
+                const order = previousOrders.find(o => o.id === orderId)
                 if (order && order.product_id) {
-                    // 1. Get product weight
                     const { data: product } = await supabase
                         .from('products')
                         .select('weight_grams')
@@ -65,9 +69,7 @@ export default function KanbanBoard() {
                         .maybeSingle()
 
                     if (product && product.weight_grams > 0) {
-                        // 2. Determine which roll to deduct from
                         let targetInventoryId = order.inventory_id
-
                         if (!targetInventoryId) {
                             const { data: firstFilament } = await supabase
                                 .from('inventory')
@@ -79,7 +81,6 @@ export default function KanbanBoard() {
                         }
 
                         if (targetInventoryId) {
-                            // 3. Get current stock
                             const { data: filament } = await supabase
                                 .from('inventory')
                                 .select('id, stock_grams')
@@ -87,7 +88,6 @@ export default function KanbanBoard() {
                                 .maybeSingle()
 
                             if (filament) {
-                                // 4. Deduct weight (multiplied by quantity)
                                 const totalWeightDraft = product.weight_grams * (order.quantity || 1)
                                 const newStock = Math.max(0, (filament.stock_grams || 0) - totalWeightDraft)
                                 await supabase
@@ -95,15 +95,21 @@ export default function KanbanBoard() {
                                     .update({ stock_grams: newStock })
                                     .eq('id', targetInventoryId)
 
-                                toast.success(`Stock descontado: -${totalWeightDraft}g (${order.quantity || 1} unidades)`)
+                                toast.success(`Stock descontado: -${totalWeightDraft}g`)
                             }
                         }
                     }
                 }
             }
+
+            // 5. Final sync: Fetch everything to ensure UI is perfectly aligned with DB triggers/views
+            await fetchOrders(true)
+
         } catch (error: any) {
+            console.error('Update status error:', error)
             toast.error('Error al actualizar estado', { description: error.message })
-            fetchOrders()
+            // Rollback optimistic update
+            setOrders(previousOrders)
         }
     }
 
