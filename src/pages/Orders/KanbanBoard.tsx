@@ -50,15 +50,24 @@ export default function KanbanBoard() {
 
         try {
             // 3. Persist to DB
-            const { error } = await supabase
+            const { error, data: updatedData } = await supabase
                 .from('orders')
                 .update({ status: newStatus })
                 .eq('id', orderId)
-                .select()
+                .select(`
+                    *,
+                    products (name)
+                `)
+                .single()
 
             if (error) throw error
 
-            // 4. Inventory Deduction Logic (ONLY if moving TO 'terminado')
+            // 4. Update the local state with the exact record from DB (including any server-side changes)
+            if (updatedData) {
+                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updatedData } : o))
+            }
+
+            // 5. Inventory Deduction Logic (ONLY if moving TO 'terminado')
             if (newStatus === 'terminado') {
                 const order = previousOrders.find(o => o.id === orderId)
                 if (order && order.product_id) {
@@ -102,13 +111,10 @@ export default function KanbanBoard() {
                 }
             }
 
-            // 5. Final sync: Fetch everything to ensure UI is perfectly aligned with DB triggers/views
-            await fetchOrders(true)
-
         } catch (error: any) {
             console.error('Update status error:', error)
             toast.error('Error al actualizar estado', { description: error.message })
-            // Rollback optimistic update
+            // Rollback optimistic update on failure
             setOrders(previousOrders)
         }
     }
