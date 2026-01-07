@@ -10,6 +10,7 @@ import MainLayout from '@/layouts/MainLayout'
 import ProductList from '@/pages/Products/ProductList'
 import KanbanBoard from '@/pages/Orders/KanbanBoard'
 import FinancePage from '@/pages/Finance/FinancePage'
+import AuditPage from '@/pages/AuditPage'
 
 // Placeholders to avoid build errors if files missing
 // const OrdersPage = () => <div className="p-4">Pedidos (En construcción)</div>
@@ -49,6 +50,7 @@ function App() {
             <Route path="/products" element={<ProductList />} />
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/orders" element={<KanbanBoard />} />
+            <Route path="/audit" element={<AuditPage />} />
           </Route>
         ) : (
           <Route path="*" element={<Navigate to="/login" replace />} />

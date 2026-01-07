@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { supabase } from '@/lib/supabase'
+import { logAuditAction } from '@/lib/audit'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 
@@ -68,7 +69,7 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
 
         try {
             // 1. Create the Order (Income)
-            const { error } = await supabase.from('orders').insert([
+            const { data, error } = await supabase.from('orders').insert([
                 {
                     product_id: formData.product_id,
                     description: formData.description,
@@ -76,9 +77,19 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
                     status: 'terminado', // Immediate income
                     created_at: new Date().toISOString()
                 }
-            ])
+            ]).select()
 
             if (error) throw error
+
+            // Log Audit Action
+            if (data && data[0]) {
+                await logAuditAction(
+                    'CREATE_INCOME',
+                    'orders',
+                    data[0].id,
+                    { price: formData.price, product: formData.description }
+                )
+            }
 
             toast.success('Ingreso registrado ®️')
             setOpen(false)

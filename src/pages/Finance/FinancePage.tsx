@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import IncomeDialog from './IncomeDialog'
 import ExpenseDialog from './ExpenseDialog'
+import { toast } from 'sonner'
 import {
     BarChart,
     Bar,
@@ -44,9 +45,15 @@ export default function FinancePage() {
     const fetchDetailedStats = async () => {
         setLoading(true)
 
-        // 1. Fetch All Data
-        const { data: orders } = await supabase.from('orders').select('*, products(name)').gt('price', 0)
-        const { data: expenses } = await supabase.from('expenses').select('*')
+        // 1. Fetch All Data with user profiles
+        const { data: orders } = await supabase
+            .from('orders')
+            .select('*, products(name), profiles(email)')
+            .gt('price', 0)
+
+        const { data: expenses } = await supabase
+            .from('expenses')
+            .select('*, profiles(email)')
 
         const income = orders?.reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
         const expense = expenses?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
@@ -94,9 +101,11 @@ export default function FinancePage() {
             id: o.id,
             type: 'income',
             amount: o.price,
-            description: o.description || o.products?.name || 'Venta',
+            description: o.description || (o.products as any)?.name || 'Venta',
             date: o.created_at,
-            icon: TrendingUp
+            icon: TrendingUp,
+            user_id: o.user_id,
+            author: (o.profiles as any)?.email?.split('@')[0] || 'Socio'
         })) || []
 
         const expenseItems = expenses?.map(e => ({
@@ -105,7 +114,9 @@ export default function FinancePage() {
             amount: e.amount,
             description: e.description,
             date: e.date,
-            icon: TrendingDown
+            icon: TrendingDown,
+            user_id: e.user_id,
+            author: (e.profiles as any)?.email?.split('@')[0] || 'Socio'
         })) || []
 
         const combined = [...incomeItems, ...expenseItems]
@@ -114,6 +125,22 @@ export default function FinancePage() {
 
         setTransactions(combined)
         setLoading(false)
+    }
+
+    const deleteTransaction = async (id: string, type: 'income' | 'expense') => {
+        if (!confirm('¿Seguro que quieres eliminar este registro?')) return
+
+        try {
+            const table = type === 'income' ? 'orders' : 'expenses'
+            const { error } = await supabase.from(table).delete().eq('id', id)
+
+            if (error) throw error
+
+            toast.success('Registro eliminado')
+            fetchDetailedStats()
+        } catch (error: any) {
+            toast.error('No tienes permiso o hubo un error', { description: error.message })
+        }
     }
 
     const COLORS = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6']
@@ -139,21 +166,20 @@ export default function FinancePage() {
                 <MetricCard
                     title="Ingresos Totales"
                     value={`$${stats.income.toLocaleString('es-CL')}`}
-                    trend="+12%" // Placeholder for now
+                    trend=""
                     icon={<ArrowUpRight className="text-green-500" />}
                     subValue="Ventas brutas del periodo"
                 />
                 <MetricCard
                     title="Gastos Totales"
                     value={`$${stats.expenses.toLocaleString('es-CL')}`}
-                    trend="+5%"
+                    trend=""
                     icon={<ArrowDownRight className="text-red-500" />}
                     subValue="Costo de operación"
                 />
                 <MetricCard
                     title="Ganancia Neta"
                     value={`$${stats.profit.toLocaleString('es-CL')}`}
-                    trend=""
                     icon={<DollarSign className="text-indigo-500" />}
                     subValue="Dinero real en bolsillo"
                     highlight={true}
@@ -161,7 +187,6 @@ export default function FinancePage() {
                 <MetricCard
                     title="Margen de Ganancia"
                     value={`${stats.margin.toFixed(1)}%`}
-                    trend=""
                     icon={<TrendingUp className="text-indigo-500" />}
                     subValue="Rentabilidad promedio"
                 />
@@ -239,8 +264,10 @@ export default function FinancePage() {
                                 <thead className="bg-slate-50 border-b">
                                     <tr>
                                         <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Descripción</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Socio</th>
                                         <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-center">Fecha</th>
                                         <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Monto</th>
+                                        <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase text-right">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
@@ -254,6 +281,11 @@ export default function FinancePage() {
                                                     <span className="font-semibold text-slate-700">{t.description}</span>
                                                 </div>
                                             </td>
+                                            <td className="px-6 py-4">
+                                                <span className="text-xs font-medium bg-slate-100 text-slate-600 px-2 py-1 rounded-full capitalize">
+                                                    {t.author}
+                                                </span>
+                                            </td>
                                             <td className="px-6 py-4 text-center text-sm text-slate-500">
                                                 {new Date(t.date).toLocaleDateString('es-CL')}
                                             </td>
@@ -262,11 +294,20 @@ export default function FinancePage() {
                                                     {t.type === 'income' ? '+' : '-'}${t.amount.toLocaleString('es-CL')}
                                                 </span>
                                             </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <button
+                                                    onClick={() => deleteTransaction(t.id, t.type)}
+                                                    className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                                                    title="Eliminar (Solo el autor)"
+                                                >
+                                                    <Zap size={16} />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                     {transactions.length === 0 && (
                                         <tr>
-                                            <td colSpan={3} className="px-6 py-12 text-center text-slate-400 italic">No hay registros financieros suficientes.</td>
+                                            <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">No hay registros financieros suficientes.</td>
                                         </tr>
                                     )}
                                 </tbody>

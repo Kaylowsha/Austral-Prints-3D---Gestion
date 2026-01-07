@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { supabase } from '@/lib/supabase'
+import { logAuditAction } from '@/lib/audit'
 import { toast } from 'sonner'
 import { Minus } from 'lucide-react'
 
@@ -41,16 +42,26 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
         setLoading(true)
 
         try {
-            const { error } = await supabase.from('expenses').insert([
+            const { data, error } = await supabase.from('expenses').insert([
                 {
                     category: formData.category,
                     amount: Number(formData.amount),
                     description: formData.description,
                     date: new Date().toISOString()
                 }
-            ])
+            ]).select()
 
             if (error) throw error
+
+            // Log Audit Action
+            if (data && data[0]) {
+                await logAuditAction(
+                    'CREATE_EXPENSE',
+                    'expenses',
+                    data[0].id,
+                    { amount: formData.amount, category: formData.category }
+                )
+            }
 
             toast.success('Gasto registrado')
             setOpen(false)

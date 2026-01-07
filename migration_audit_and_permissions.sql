@@ -43,3 +43,35 @@ create policy "Authenticated users can select orders" on public.orders for selec
 create policy "Authenticated users can insert orders" on public.orders for insert with check (auth.role() = 'authenticated');
 create policy "Only owner can delete orders" on public.orders for delete using (auth.uid() = user_id);
 create policy "Only owner can update orders" on public.orders for update using (auth.uid() = user_id);
+
+-- 3. Profiles Table (to map user_id to email/name)
+create table if not exists public.profiles (
+  id uuid references auth.users(id) primary key,
+  email text,
+  updated_at timestamp with time zone default now()
+);
+
+-- Enable RLS on profiles
+alter table public.profiles enable row level security;
+create policy "Public profiles are viewable by everyone" on public.profiles for select using (true);
+create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
+
+-- Trigger to sync profiles when a user is created
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.profiles (id, email)
+  values (new.id, new.email);
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
+
+-- Manually sync existing users if any
+insert into public.profiles (id, email)
+select id, email from auth.users
+on conflict (id) do nothing;

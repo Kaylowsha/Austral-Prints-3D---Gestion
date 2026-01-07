@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { supabase } from '@/lib/supabase'
+import { logAuditAction } from '@/lib/audit'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 
@@ -67,7 +68,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
         setLoading(true)
 
         try {
-            const { error } = await supabase.from('orders').insert([
+            const { data, error } = await supabase.from('orders').insert([
                 {
                     product_id: formData.product_id,
                     description: formData.description,
@@ -76,9 +77,19 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     status: 'pendiente',
                     created_at: new Date().toISOString()
                 }
-            ])
+            ]).select()
 
             if (error) throw error
+
+            // Log Audit Action
+            if (data && data[0]) {
+                await logAuditAction(
+                    'CREATE_ORDER',
+                    'orders',
+                    data[0].id,
+                    { price: formData.price, product: formData.description }
+                )
+            }
 
             toast.success('Pedido registrado')
             setOpen(false)
