@@ -41,6 +41,7 @@ export default function FinancePage() {
         balance: 0,
         injections: 0,
         withdrawals: 0,
+        inversions: 0,
         floating: 0
     })
     const [timeframe, setTimeframe] = useState<'7d' | '30d' | 'month' | 'all'>('30d')
@@ -93,14 +94,13 @@ export default function FinancePage() {
         const op_expenses = expenses?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
         const prod_cost = realized_orders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
-        const injections = (realized_orders.filter(o => !o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0) +
-            (expenses?.filter(e => e.category === 'inversion').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0)
-
+        const injections = realized_orders.filter(o => !o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+        const inversions = expenses?.filter(e => e.category === 'inversion').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
         const withdrawals = expenses?.filter(e => e.category === 'retiro').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
         const profit = op_income - op_expenses - prod_cost
         const margin = op_income > 0 ? (profit / op_income) * 100 : 0
-        const balance = profit + injections - withdrawals
+        const balance = profit + injections - inversions - withdrawals
 
         setStats({
             income: op_income,
@@ -110,6 +110,7 @@ export default function FinancePage() {
             balance,
             injections,
             withdrawals,
+            inversions,
             floating
         })
 
@@ -411,29 +412,37 @@ export default function FinancePage() {
                         <CardDescription>Inyecciones y Retiros fuera de la operación</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <div className="flex justify-between items-center p-4 bg-white rounded-2xl border border-indigo-100 shadow-sm">
-                            <div className="flex items-center gap-3">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-indigo-100 shadow-sm">
                                 <div className="p-2 bg-green-100 text-green-600 rounded-xl">
-                                    <ArrowUpRight size={20} />
+                                    <ArrowUpRight size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inyecciones</p>
-                                    <p className="text-lg font-black text-slate-900">${stats.injections.toLocaleString('es-CL')}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">Inyectado</p>
+                                    <p className="text-sm font-black text-slate-900">${stats.injections.toLocaleString('es-CL')}</p>
                                 </div>
                             </div>
-                            <div className="h-10 w-px bg-slate-100" />
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-rose-100 text-rose-600 rounded-xl">
-                                    <ArrowDownRight size={20} />
+                            <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                                    <ArrowDownRight size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Retiros</p>
-                                    <p className="text-lg font-black text-slate-900">${stats.withdrawals.toLocaleString('es-CL')}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">Invertido</p>
+                                    <p className="text-sm font-black text-slate-900">${stats.inversions.toLocaleString('es-CL')}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-indigo-100 shadow-sm">
+                                <div className="p-2 bg-rose-100 text-rose-600 rounded-xl">
+                                    <ArrowDownRight size={18} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">Retirado</p>
+                                    <p className="text-sm font-black text-slate-900">${stats.withdrawals.toLocaleString('es-CL')}</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-2 pt-2">
                             <div className="flex justify-between text-xs font-bold text-slate-500 uppercase px-1">
                                 <span>Operación</span>
                                 <span className={stats.profit >= 0 ? 'text-green-600' : 'text-rose-600'}>
@@ -442,8 +451,8 @@ export default function FinancePage() {
                             </div>
                             <div className="flex justify-between text-xs font-bold text-slate-500 uppercase px-1">
                                 <span>Capital Neto</span>
-                                <span className={stats.injections - stats.withdrawals >= 0 ? 'text-indigo-600' : 'text-rose-600'}>
-                                    {stats.injections - stats.withdrawals >= 0 ? '+' : ''}${(stats.injections - stats.withdrawals).toLocaleString('es-CL')}
+                                <span className={stats.injections - stats.inversions - stats.withdrawals >= 0 ? 'text-indigo-600' : 'text-rose-600'}>
+                                    {stats.injections - stats.inversions - stats.withdrawals >= 0 ? '+' : ''}${(stats.injections - stats.inversions - stats.withdrawals).toLocaleString('es-CL')}
                                 </span>
                             </div>
                             <div className="border-t pt-2 mt-2 flex justify-between text-sm font-black text-indigo-700 uppercase px-1">

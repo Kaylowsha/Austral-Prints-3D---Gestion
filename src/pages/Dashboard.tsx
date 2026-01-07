@@ -56,23 +56,29 @@ export default function Dashboard() {
             .limit(10)
 
         // 3. Totals for cards (Filter by status)
-        const { data: allOrders } = await supabase.from('orders').select('price, cost, status').gt('price', 0)
+        const { data: allOrders } = await supabase.from('orders').select('price, cost, status, product_id').gt('price', 0)
 
         const realizedOrders = allOrders?.filter(o => ['terminado', 'entregado'].includes(o.status)) || []
         const pendingOrders = allOrders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
 
-        const realTotalIncome = realizedOrders.reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+        const realTotalIncome = realizedOrders.filter(o => o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
         const realTotalCost = realizedOrders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
-        const floatingIncome = pendingOrders.reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+        const floatingIncome = pendingOrders.filter(o => o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
 
-        const { data: allExpenses } = await supabase.from('expenses').select('amount')
-        const realTotalExpenses = allExpenses?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
+        const { data: allExpensesData } = await supabase.from('expenses').select('amount, category')
+        const realTotalExpenses = allExpensesData?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
+        const totalInversions = allExpensesData?.filter(e => e.category === 'inversion').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
+        const totalWithdrawals = allExpensesData?.filter(e => e.category === 'retiro').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
+
+        const netProfit = realTotalIncome - realTotalExpenses - realTotalCost
+        const totalInjections = realizedOrders.filter(o => !o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+        const finalBalance = netProfit + totalInjections - totalInversions - totalWithdrawals
 
         setFinancials({
             income: realTotalIncome,
-            expenses: realTotalExpenses,
+            expenses: realTotalExpenses + realTotalCost,
             production_cost: realTotalCost,
-            balance: realTotalIncome - realTotalExpenses - realTotalCost,
+            balance: finalBalance,
             floating: floatingIncome
         })
 
@@ -198,7 +204,7 @@ export default function Dashboard() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className={`font-bold text-sm ${item.type === 'income' ? 'text-green-600' : 'text-slate-900'}`}>
+                                        <div className={`font-bold text-sm ${item.status === 'cancelado' ? 'text-slate-300 line-through' : item.type === 'income' ? 'text-green-600' : 'text-slate-900'}`}>
                                             {item.type === 'income' ? '+' : '-'}${item.amount.toLocaleString('es-CL')}
                                         </div>
                                     </div>
