@@ -106,6 +106,8 @@ export default function KanbanBoard() {
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
 
         try {
+            console.log(`Updating order ${orderId} to ${newStatus}...`)
+
             // 3. Persist to DB (Simplified select to avoid 406/PGRST116 errors)
             const { error, data } = await supabase
                 .from('orders')
@@ -115,26 +117,32 @@ export default function KanbanBoard() {
 
             if (error) throw error
 
-            // 4. Update the local state with the actual returned record (if any)
-            // Note: We keep the optimistic products join if the server doesn't return it
-            if (data && data.length > 0) {
-                const updatedRow = data[0];
-                setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updatedRow } : o))
+            // 4. Critical check: Did we actually update a row?
+            if (!data || data.length === 0) {
+                console.error('Update matched 0 rows. Check RLS policies or if the ID exists.')
+                throw new Error('No se pudo guardar el cambio en la base de datos (0 filas afectadas).')
             }
 
-            // 5. Success Toast
+            // 5. Update the local state with the actual returned record
+            const updatedRow = data[0];
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updatedRow } : o))
+
+            // 6. Success Toast
             const colLabel = COLUMNS.find(c => c.id === newStatus)?.label || newStatus
             toast.success(`Pedido movido a ${colLabel}`)
 
-            // 6. Inventory Deduction (Async, non-blocking for the UI move)
+            // 7. Inventory Deduction (Async, non-blocking for the UI move)
             if (newStatus === 'terminado' && targetOrder) {
                 deductInventory({ ...targetOrder, status: newStatus })
             }
 
         } catch (error: any) {
             console.error('Update status error:', error)
-            toast.error('Error al actualizar estado', { description: error.message || 'Error desconocido' })
-            // 7. Rollback optimistic update ONLY on real failure
+            toast.error('Error de persistencia', {
+                description: error.message || 'La base de datos rechazó el cambio.',
+                duration: 5000
+            })
+            // 8. Rollback optimistic update ONLY on real failure
             setOrders(previousOrders)
         } finally {
             setIsUpdating(prev => ({ ...prev, [orderId]: false }))
