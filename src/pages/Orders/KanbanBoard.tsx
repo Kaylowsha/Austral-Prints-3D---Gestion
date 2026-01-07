@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Loader2, ArrowRight } from 'lucide-react'
+import { toast } from 'sonner'
 import OrderDialog from './OrderDialog'
 
 // Define columns
@@ -59,7 +60,7 @@ export default function KanbanBoard() {
                         .from('products')
                         .select('weight_grams')
                         .eq('id', order.product_id)
-                        .single()
+                        .maybeSingle()
 
                     if (product && product.weight_grams > 0) {
                         // 2. Get first available filament
@@ -68,7 +69,7 @@ export default function KanbanBoard() {
                             .select('id, stock_grams')
                             .eq('type', 'Filamento')
                             .limit(1)
-                            .single()
+                            .maybeSingle()
 
                         if (filament) {
                             // 3. Deduct weight
