@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,9 +17,11 @@ import { Plus } from 'lucide-react'
 
 interface ProductFormProps {
     onSuccess: () => void
+    product?: any
+    trigger?: React.ReactNode
 }
 
-export default function ProductForm({ onSuccess }: ProductFormProps) {
+export default function ProductForm({ onSuccess, product, trigger }: ProductFormProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [data, setData] = useState({
@@ -29,28 +31,53 @@ export default function ProductForm({ onSuccess }: ProductFormProps) {
         print_time_mins: ''
     })
 
+    useEffect(() => {
+        if (product && open) {
+            setData({
+                name: product.name || '',
+                base_price: product.base_price?.toString() || '',
+                weight_grams: product.weight_grams?.toString() || '',
+                print_time_mins: product.print_time_mins?.toString() || ''
+            })
+        }
+    }, [product, open])
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
 
+        const payload = {
+            name: data.name,
+            base_price: Number(data.base_price) || 0,
+            weight_grams: Number(data.weight_grams) || 0,
+            print_time_mins: Number(data.print_time_mins) || 0
+        }
+
         try {
-            const { error } = await supabase.from('products').insert([
-                {
-                    name: data.name,
-                    base_price: Number(data.base_price) || 0,
-                    weight_grams: Number(data.weight_grams) || 0,
-                    print_time_mins: Number(data.print_time_mins) || 0
-                }
-            ])
+            let error
+            if (product?.id) {
+                const { error: updateError } = await supabase
+                    .from('products')
+                    .update(payload)
+                    .eq('id', product.id)
+                error = updateError
+            } else {
+                const { error: insertError } = await supabase
+                    .from('products')
+                    .insert([payload])
+                error = insertError
+            }
 
             if (error) throw error
 
-            toast.success('Producto creado exitosamente')
+            toast.success(product ? 'Producto actualizado' : 'Producto creado')
             setOpen(false)
-            setData({ name: '', base_price: '', weight_grams: '', print_time_mins: '' })
+            if (!product) {
+                setData({ name: '', base_price: '', weight_grams: '', print_time_mins: '' })
+            }
             onSuccess()
         } catch (error: any) {
-            toast.error('Error al crear producto', { description: error.message })
+            toast.error('Error al guardar producto', { description: error.message })
         } finally {
             setLoading(false)
         }
@@ -59,16 +86,18 @@ export default function ProductForm({ onSuccess }: ProductFormProps) {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
-                    <Plus size={20} />
-                    Nuevo
-                </Button>
+                {trigger || (
+                    <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700">
+                        <Plus size={20} />
+                        Nuevo
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Nuevo Producto</DialogTitle>
+                    <DialogTitle>{product ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
                     <DialogDescription>
-                        Agrega un nuevo modelo a tu catálogo de impresiones.
+                        {product ? 'Actualiza los detalles de este producto.' : 'Agrega un nuevo modelo a tu catálogo de impresiones.'}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
@@ -126,7 +155,7 @@ export default function ProductForm({ onSuccess }: ProductFormProps) {
                     </div>
                     <DialogFooter>
                         <Button type="submit" disabled={loading}>
-                            {loading ? 'Guardando...' : 'Guardar Producto'}
+                            {loading ? 'Guardando...' : product ? 'Actualizar' : 'Guardar Producto'}
                         </Button>
                     </DialogFooter>
                 </form>

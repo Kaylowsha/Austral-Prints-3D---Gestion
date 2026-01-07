@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Package } from "lucide-react"
+import { Edit2, Package } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import ProductForm from "./ProductForm"
 
@@ -47,9 +47,20 @@ export default function ProductList() {
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {products.map(product => (
-                        <Card key={product.id} className="hover:shadow-md transition-shadow">
+                        <Card key={product.id} className="hover:shadow-md transition-shadow relative group">
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ProductForm
+                                    product={product}
+                                    onSuccess={fetchProducts}
+                                    trigger={
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600">
+                                            <Edit2 size={16} />
+                                        </Button>
+                                    }
+                                />
+                            </div>
                             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                                <CardTitle className="text-base font-semibold text-slate-800 line-clamp-1">
+                                <CardTitle className="text-base font-semibold text-slate-800 line-clamp-1 pr-8">
                                     {product.name}
                                 </CardTitle>
                                 <div className="text-sm font-bold text-indigo-600">
