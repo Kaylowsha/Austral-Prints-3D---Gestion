@@ -17,6 +17,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,6 +31,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Verify Environment Variables
+        run: |
+          if [ -z "${{ secrets.VITE_SUPABASE_URL }}" ]; then echo "Error: VITE_SUPABASE_URL is not set"; exit 1; fi
+          if [ -z "${{ secrets.VITE_SUPABASE_ANON_KEY }}" ]; then echo "Error: VITE_SUPABASE_ANON_KEY is not set"; exit 1; fi
 
       - name: Build
         run: npm run build
