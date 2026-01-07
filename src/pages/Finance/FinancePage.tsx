@@ -40,7 +40,8 @@ export default function FinancePage() {
         margin: 0,
         balance: 0,
         injections: 0,
-        withdrawals: 0
+        withdrawals: 0,
+        floating: 0
     })
     const [timeframe, setTimeframe] = useState<'7d' | '30d' | 'month' | 'all'>('30d')
     const [categoryData, setCategoryData] = useState<any[]>([])
@@ -83,11 +84,16 @@ export default function FinancePage() {
         const { data: expenses } = await expensesQuery
 
         // Separate Operational from Capital
-        const op_income = orders?.filter(o => o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
-        const op_expenses = expenses?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
-        const prod_cost = orders?.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
+        const realized_orders = orders?.filter(o => ['terminado', 'entregado'].includes(o.status)) || []
+        const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
 
-        const injections = (orders?.filter(o => !o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0) +
+        const op_income = realized_orders.filter(o => o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+        const floating = pending_orders.filter(o => o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+
+        const op_expenses = expenses?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
+        const prod_cost = realized_orders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
+
+        const injections = (realized_orders.filter(o => !o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0) +
             (expenses?.filter(e => e.category === 'inversion').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0)
 
         const withdrawals = expenses?.filter(e => e.category === 'retiro').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
@@ -103,7 +109,8 @@ export default function FinancePage() {
             margin,
             balance,
             injections,
-            withdrawals
+            withdrawals,
+            floating
         })
 
         // 2. Format Category Data (Operational only)
@@ -136,7 +143,7 @@ export default function FinancePage() {
             const dayProdCost = orders?.filter(o => (o.date || o.created_at).startsWith(date))
                 .reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
-            const dayInjections = (orders?.filter(o => !o.product_id && (o.date || o.created_at).startsWith(date)).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0) +
+            const dayInjections = (realized_orders.filter(o => !o.product_id && (o.date || o.created_at).startsWith(date)).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0) +
                 (expenses?.filter(e => e.category === 'inversion' && e.date === date).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0)
 
             const dayWithdrawals = expenses?.filter(e => e.category === 'retiro' && e.date === date)
@@ -252,29 +259,29 @@ export default function FinancePage() {
             {/* Métricas de Alto Nivel */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <MetricCard
-                    title="Ganancia Bruta"
+                    title="Ingresos Reales"
                     value={`$${stats.income.toLocaleString('es-CL')}`}
                     icon={<ArrowUpRight className="text-green-500" />}
-                    subValue="Ventas operativas del periodo"
+                    subValue="Ventas pagadas/listas"
                 />
                 <MetricCard
-                    title="Gastos Operativos"
-                    value={`$${stats.expenses.toLocaleString('es-CL')}`}
-                    icon={<ArrowDownRight className="text-red-500" />}
-                    subValue="Op + Insumos + Prod"
+                    title="Ingresos Flotantes"
+                    value={`$${stats.floating.toLocaleString('es-CL')}`}
+                    icon={<Zap className="text-amber-500" />}
+                    subValue="Ventas en curso/pendientes"
                 />
                 <MetricCard
                     title="Utilidad Neta"
                     value={`$${stats.profit.toLocaleString('es-CL')}`}
                     icon={<DollarSign className="text-white" />}
-                    subValue="Rentabilidad real del negocio"
+                    subValue="Rentabilidad real actual"
                     highlight={true}
                 />
                 <MetricCard
                     title="Balance en Caja"
                     value={`$${stats.balance.toLocaleString('es-CL')}`}
                     icon={<TrendingUp className="text-indigo-600" />}
-                    subValue="Disponible (con Iny/Ret)"
+                    subValue="Dinero líquido disponible"
                 />
             </div>
 

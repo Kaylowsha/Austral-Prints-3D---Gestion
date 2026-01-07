@@ -12,7 +12,8 @@ export default function Dashboard() {
         income: 0,
         expenses: 0,
         production_cost: 0,
-        balance: 0
+        balance: 0,
+        floating: 0
     })
     const [stock, setStock] = useState<any>(null)
     const [history, setHistory] = useState<any[]>([])
@@ -54,10 +55,15 @@ export default function Dashboard() {
             .order('date', { ascending: false })
             .limit(10)
 
-        // 3. Totals for cards
-        const { data: allOrders } = await supabase.from('orders').select('price, cost').gt('price', 0)
-        const realTotalIncome = allOrders?.reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
-        const realTotalCost = allOrders?.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
+        // 3. Totals for cards (Filter by status)
+        const { data: allOrders } = await supabase.from('orders').select('price, cost, status').gt('price', 0)
+
+        const realizedOrders = allOrders?.filter(o => ['terminado', 'entregado'].includes(o.status)) || []
+        const pendingOrders = allOrders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
+
+        const realTotalIncome = realizedOrders.reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+        const realTotalCost = realizedOrders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
+        const floatingIncome = pendingOrders.reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
 
         const { data: allExpenses } = await supabase.from('expenses').select('amount')
         const realTotalExpenses = allExpenses?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
@@ -66,27 +72,29 @@ export default function Dashboard() {
             income: realTotalIncome,
             expenses: realTotalExpenses,
             production_cost: realTotalCost,
-            balance: realTotalIncome - realTotalExpenses - realTotalCost
+            balance: realTotalIncome - realTotalExpenses - realTotalCost,
+            floating: floatingIncome
         })
 
         // Merge for History
-        const incomeItems = orders?.map(o => ({
+        const incomeItems = (orders || []).map(o => ({
             id: o.id,
             type: 'income',
             amount: o.price,
             description: o.description || 'Venta',
+            status: o.status,
             date: o.date || o.created_at,
             icon: TrendingUp
-        })) || []
+        }))
 
-        const expenseItems = expenses?.map(e => ({
+        const expenseItems = (expenses || []).map(e => ({
             id: e.id,
             type: 'expense',
             amount: e.amount,
             description: e.description || 'Gasto',
             date: e.date,
             icon: TrendingDown
-        })) || []
+        }))
 
         const combined = [...incomeItems, ...expenseItems]
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -127,8 +135,15 @@ export default function Dashboard() {
                                 </div>
                             )}
                         </div>
-                        <div className="text-5xl font-black mb-8 tracking-tighter">
-                            ${financials.balance.toLocaleString('es-CL')}
+
+                        <div className="flex items-end justify-between mb-8">
+                            <div className="text-5xl font-black tracking-tighter">
+                                ${financials.balance.toLocaleString('es-CL')}
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Flotante (Pendiente)</p>
+                                <p className="text-xl font-black text-white">+${financials.floating.toLocaleString('es-CL')}</p>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-3 gap-2">
@@ -179,6 +194,7 @@ export default function Dashboard() {
                                                 <p className="font-medium text-sm">{item.description}</p>
                                                 <p className="text-xs text-slate-500">
                                                     {new Date(item.date).toLocaleDateString('es-CL')}
+                                                    {item.status && <span className="ml-2 text-[10px] uppercase font-bold text-indigo-400">({item.status})</span>}
                                                 </p>
                                             </div>
                                         </div>
