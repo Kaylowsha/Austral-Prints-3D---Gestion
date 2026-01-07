@@ -42,13 +42,49 @@ export default function KanbanBoard() {
         // Optimistic update
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o))
 
-        const { error } = await supabase
-            .from('orders')
-            .update({ status: newStatus })
-            .eq('id', orderId)
+        try {
+            const { error } = await supabase
+                .from('orders')
+                .update({ status: newStatus })
+                .eq('id', orderId)
 
-        if (error) {
-            // Revert if error
+            if (error) throw error
+
+            // Inventory Deduction Logic
+            if (newStatus === 'terminado') {
+                const order = orders.find(o => o.id === orderId)
+                if (order && order.product_id) {
+                    // 1. Get product weight
+                    const { data: product } = await supabase
+                        .from('products')
+                        .select('weight_grams')
+                        .eq('id', order.product_id)
+                        .single()
+
+                    if (product && product.weight_grams > 0) {
+                        // 2. Get first available filament
+                        const { data: filament } = await supabase
+                            .from('inventory')
+                            .select('id, stock_grams')
+                            .eq('type', 'Filamento')
+                            .limit(1)
+                            .single()
+
+                        if (filament) {
+                            // 3. Deduct weight
+                            const newStock = Math.max(0, filament.stock_grams - product.weight_grams)
+                            await supabase
+                                .from('inventory')
+                                .update({ stock_grams: newStock })
+                                .eq('id', filament.id)
+
+                            toast.success(`Inventario actualizado: -${product.weight_grams}g`)
+                        }
+                    }
+                }
+            }
+        } catch (error: any) {
+            toast.error('Error al actualizar estado', { description: error.message })
             fetchOrders()
         }
     }

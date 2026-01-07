@@ -68,12 +68,18 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
         setLoading(true)
 
         try {
+            // Calculate Cost
+            const selectedProduct = products.find(p => p.id === formData.product_id)
+            const weight = selectedProduct?.weight_grams || 0
+            const estimatedCost = weight * 20
+
             // 1. Create the Order (Income)
             const { data, error } = await supabase.from('orders').insert([
                 {
                     product_id: formData.product_id,
                     description: formData.description,
                     price: Number(formData.price),
+                    cost: estimatedCost,
                     status: 'terminado', // Immediate income
                     created_at: new Date().toISOString()
                 }

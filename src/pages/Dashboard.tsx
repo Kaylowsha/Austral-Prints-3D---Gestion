@@ -43,8 +43,9 @@ export default function Dashboard() {
         // Let's fix that.
 
         // Total Income Query
-        const { data: allOrders } = await supabase.from('orders').select('price').gt('price', 0)
+        const { data: allOrders } = await supabase.from('orders').select('price, cost').gt('price', 0)
         const realTotalIncome = allOrders?.reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+        const realTotalCost = allOrders?.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
         // Total Expenses Query
         const { data: allExpenses } = await supabase.from('expenses').select('amount')
@@ -53,7 +54,7 @@ export default function Dashboard() {
         setFinancials({
             income: realTotalIncome,
             expenses: realTotalExpenses,
-            balance: realTotalIncome - realTotalExpenses
+            balance: realTotalIncome - realTotalExpenses - realTotalCost
         })
 
         // Merge for History

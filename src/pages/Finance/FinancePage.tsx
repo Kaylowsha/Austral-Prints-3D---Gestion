@@ -57,10 +57,13 @@ export default function FinancePage() {
 
         const income = orders?.reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
         const expense = expenses?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
-        const profit = income - expense
+
+        // New: Production Cost calculation
+        const materialCost = orders?.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
+        const profit = income - expense - materialCost
         const margin = income > 0 ? (profit / income) * 100 : 0
 
-        setStats({ income, expenses: expense, profit, margin })
+        setStats({ income, expenses: expense + materialCost, profit, margin })
 
         // 2. Format Category Data for Pie Chart
         const categories: Record<string, number> = {}
@@ -175,7 +178,7 @@ export default function FinancePage() {
                     value={`$${stats.expenses.toLocaleString('es-CL')}`}
                     trend=""
                     icon={<ArrowDownRight className="text-red-500" />}
-                    subValue="Costo de operación"
+                    subValue="Operación + Costo Material"
                 />
                 <MetricCard
                     title="Ganancia Neta"

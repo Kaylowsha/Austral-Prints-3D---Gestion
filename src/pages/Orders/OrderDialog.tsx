@@ -68,11 +68,17 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
         setLoading(true)
 
         try {
+            // Calculate Cost based on product weight
+            const selectedProduct = products.find(p => p.id === formData.product_id)
+            const weight = selectedProduct?.weight_grams || 0
+            const estimatedCost = weight * 20 // $20 CLP per gram
+
             const { data, error } = await supabase.from('orders').insert([
                 {
                     product_id: formData.product_id,
                     description: formData.description,
                     price: Number(formData.price),
+                    cost: estimatedCost, // Auto-calculated cost
                     deadline: formData.deadline || null,
                     status: 'pendiente',
                     created_at: new Date().toISOString()
