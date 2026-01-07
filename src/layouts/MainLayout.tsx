@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Home, Package, ShoppingCart, Wallet, ShieldCheck } from 'lucide-react'
+import { Home, Package, ShoppingCart, Wallet, ShieldCheck, Layers } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function MainLayout() {
@@ -10,7 +10,8 @@ export default function MainLayout() {
         { icon: Home, label: 'Inicio', path: '/' },
         { icon: Wallet, label: 'Finanzas', path: '/finance' },
         { icon: ShoppingCart, label: 'Pedidos', path: '/orders' },
-        { icon: Package, label: 'Productos', path: '/products' },
+        { icon: Package, label: 'Inventario', path: '/inventory' },
+        { icon: Layers, label: 'Productos', path: '/products' },
         { icon: ShieldCheck, label: 'Auditoría', path: '/audit' },
     ]
 
