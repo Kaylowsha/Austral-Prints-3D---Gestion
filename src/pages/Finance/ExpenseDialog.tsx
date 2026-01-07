@@ -34,7 +34,8 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
     const [formData, setFormData] = useState({
         category: '',
         amount: '',
-        description: ''
+        description: '',
+        date: new Date().toISOString().split('T')[0]
     })
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -47,7 +48,7 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
                     category: formData.category,
                     amount: Number(formData.amount),
                     description: formData.description,
-                    date: new Date().toISOString()
+                    date: formData.date
                 }
             ]).select()
 
@@ -65,7 +66,7 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
 
             toast.success('Gasto registrado')
             setOpen(false)
-            setFormData({ category: '', amount: '', description: '' })
+            setFormData({ category: '', amount: '', description: '', date: new Date().toISOString().split('T')[0] })
             if (onSuccess) onSuccess()
 
         } catch (error: any) {
@@ -94,19 +95,31 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
 
-                    <div className="grid gap-2">
-                        <Label>Categoría</Label>
-                        <Select onValueChange={(val) => setFormData({ ...formData, category: val })}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecciona..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="materiales">Materiales (Filamento/Resina)</SelectItem>
-                                <SelectItem value="mantenimiento">Repuestos / Mantención</SelectItem>
-                                <SelectItem value="servicios">Servicios (Luz/Internet)</SelectItem>
-                                <SelectItem value="otros">Otros</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label>Categoría</Label>
+                            <Select onValueChange={(val) => setFormData({ ...formData, category: val })} value={formData.category}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Tipo..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="materiales">Materiales</SelectItem>
+                                    <SelectItem value="mantenimiento">Mantención</SelectItem>
+                                    <SelectItem value="servicios">Servicios</SelectItem>
+                                    <SelectItem value="retiro">Retiro de Dinero</SelectItem>
+                                    <SelectItem value="inversion">Inversión</SelectItem>
+                                    <SelectItem value="otros">Otros</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Fecha</Label>
+                            <Input
+                                type="date"
+                                value={formData.date}
+                                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                            />
+                        </div>
                     </div>
 
                     <div className="grid gap-2">
@@ -121,17 +134,16 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Descripción</Label>
+                        <Label>Descripción / Nota</Label>
                         <Input
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="Ej: 2 Rollos PLA Negro"
-                            required
+                            placeholder="¿En qué se usó?"
                         />
                     </div>
 
                     <DialogFooter>
-                        <Button type="submit" disabled={loading || !formData.category} variant="destructive">
+                        <Button type="submit" disabled={loading || !formData.category} variant="destructive" className="w-full">
                             {loading ? 'Guardando...' : 'Confirmar Gasto'}
                         </Button>
                     </DialogFooter>

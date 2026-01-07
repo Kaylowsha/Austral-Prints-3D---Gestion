@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabase'
 import { logAuditAction } from '@/lib/audit'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface IncomeDialogProps {
     onSuccess?: () => void
@@ -36,7 +37,9 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
         product_id: '',
         description: '',
         price: '',
-        quantity: '1' // Assuming 1 by default
+        quantity: '1', // Assuming 1 by default
+        date: new Date().toISOString().split('T')[0],
+        mode: 'producto' as 'producto' | 'manual'
     })
 
     // Fetch products when dialog opens
@@ -76,12 +79,13 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
             // 1. Create the Order (Income)
             const { data, error } = await supabase.from('orders').insert([
                 {
-                    product_id: formData.product_id,
+                    product_id: formData.mode === 'producto' ? formData.product_id : null,
                     description: formData.description,
                     price: Number(formData.price),
-                    cost: estimatedCost,
+                    cost: formData.mode === 'producto' ? estimatedCost : 0,
                     status: 'terminado', // Immediate income
-                    created_at: new Date().toISOString()
+                    created_at: new Date().toISOString(),
+                    date: formData.date
                 }
             ]).select()
 
@@ -99,7 +103,14 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
 
             toast.success('Ingreso registrado ®️')
             setOpen(false)
-            setFormData({ product_id: '', description: '', price: '', quantity: '1' })
+            setFormData({
+                product_id: '',
+                description: '',
+                price: '',
+                quantity: '1',
+                date: new Date().toISOString().split('T')[0],
+                mode: 'producto'
+            })
             if (onSuccess) onSuccess()
 
         } catch (error: any) {
@@ -128,46 +139,91 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
 
-                    <div className="grid gap-2">
-                        <Label>Producto</Label>
-                        <Select onValueChange={handleProductChange}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecciona un producto..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {products.map(p => (
-                                    <SelectItem key={p.id} value={p.id}>
-                                        {p.name} (${p.base_price})
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                    <div className="flex bg-slate-100 p-1 rounded-lg gap-1">
+                        <Button
+                            type="button"
+                            variant={formData.mode === 'producto' ? 'default' : 'ghost'}
+                            className={cn("flex-1 text-xs h-8", formData.mode === 'producto' ? "bg-white text-slate-900 shadow-sm hover:bg-white" : "text-slate-500")}
+                            onClick={() => setFormData({ ...formData, mode: 'producto' })}
+                        >
+                            Producto
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={formData.mode === 'manual' ? 'default' : 'ghost'}
+                            className={cn("flex-1 text-xs h-8", formData.mode === 'manual' ? "bg-white text-slate-900 shadow-sm hover:bg-white" : "text-slate-500")}
+                            onClick={() => setFormData({ ...formData, mode: 'manual', product_id: '' })}
+                        >
+                            Otro / Manual
+                        </Button>
                     </div>
 
+                    {formData.mode === 'producto' ? (
+                        <div className="grid gap-2">
+                            <Label>Producto</Label>
+                            <Select onValueChange={handleProductChange} value={formData.product_id}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona un producto..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {products.map(p => (
+                                        <SelectItem key={p.id} value={p.id}>
+                                            {p.name} (${p.base_price})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    ) : (
+                        <div className="grid gap-2">
+                            <Label>Concepto de Ingreso</Label>
+                            <Select
+                                onValueChange={(val) => setFormData({ ...formData, description: val })}
+                                value={formData.description}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Selecciona tipo de ingreso..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Inyección de Capital">Inyección de Capital</SelectItem>
+                                    <SelectItem value="Venta Manual / Feria">Venta Manual / Feria</SelectItem>
+                                    <SelectItem value="Servicio de Diseño">Servicio de Diseño</SelectItem>
+                                    <SelectItem value="Otro">Otro</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+
                     <div className="grid gap-2">
-                        <Label>Descripción (Opcional)</Label>
+                        <Label>{formData.mode === 'producto' ? 'Nota adicional' : 'Descripción detallada'}</Label>
                         <Input
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="Detalle extra..."
+                            placeholder={formData.mode === 'producto' ? 'Detalle extra (ej: color especial)...' : 'Ej: Inversión para nuevas máquinas'}
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
-                            <Label>Precio Venta</Label>
+                            <Label>Monto</Label>
                             <Input
                                 type="number"
                                 value={formData.price}
                                 onChange={e => setFormData({ ...formData, price: e.target.value })}
                             />
                         </div>
-                        {/* Quantity can be added later if schema supports it directly on orders line items, 
-                 for now we assume 1 order = 1 item or lumped price */}
+                        <div className="grid gap-2">
+                            <Label>Fecha</Label>
+                            <Input
+                                type="date"
+                                value={formData.date}
+                                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                            />
+                        </div>
                     </div>
 
                     <DialogFooter>
-                        <Button type="submit" disabled={loading || !formData.product_id} className="bg-green-600 hover:bg-green-700">
+                        <Button type="submit" disabled={loading || (!formData.product_id && formData.mode === 'producto') || !formData.price} className="bg-green-600 hover:bg-green-700 w-full">
                             {loading ? 'Guardando...' : 'Confirmar Ingreso'}
                         </Button>
                     </DialogFooter>

@@ -75,7 +75,7 @@ export default function Dashboard() {
             type: 'income',
             amount: o.price,
             description: o.description || 'Venta',
-            date: o.created_at,
+            date: o.date || o.created_at,
             icon: TrendingUp
         })) || []
 
