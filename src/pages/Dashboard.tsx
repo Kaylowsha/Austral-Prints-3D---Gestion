@@ -11,49 +11,61 @@ export default function Dashboard() {
     const [financials, setFinancials] = useState({
         income: 0,
         expenses: 0,
+        production_cost: 0,
         balance: 0
     })
+    const [stock, setStock] = useState<any>(null)
     const [history, setHistory] = useState<any[]>([])
 
     useEffect(() => {
         supabase.auth.getUser().then(({ data }) => {
             setUser(data.user)
         })
-        fetchFinancials()
+        fetchInitialData()
     }, [])
 
+    const fetchInitialData = async () => {
+        await fetchFinancials()
+        await fetchInventory()
+    }
+
+    const fetchInventory = async () => {
+        const { data } = await supabase
+            .from('inventory')
+            .select('*')
+            .eq('type', 'Filamento')
+            .limit(1)
+            .maybeSingle()
+        if (data) setStock(data)
+    }
+
     const fetchFinancials = async () => {
-        // 1. Fetch Orders (Incomes)
+        // 1. Fetch Orders (Recent for history)
         const { data: orders } = await supabase
             .from('orders')
             .select('*')
-            .gt('price', 0)
             .order('created_at', { ascending: false })
             .limit(10)
 
-        // 2. Fetch Expenses
+        // 2. Fetch Expenses (Recent for history)
         const { data: expenses } = await supabase
             .from('expenses')
             .select('*')
             .order('date', { ascending: false })
             .limit(10)
 
-        // Calculate Totals
-        // Wait, I limited to 10 above. I need separate queries for Totals and for History.
-        // Let's fix that.
-
-        // Total Income Query
+        // 3. Totals for cards
         const { data: allOrders } = await supabase.from('orders').select('price, cost').gt('price', 0)
         const realTotalIncome = allOrders?.reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
         const realTotalCost = allOrders?.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
-        // Total Expenses Query
         const { data: allExpenses } = await supabase.from('expenses').select('amount')
         const realTotalExpenses = allExpenses?.reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
         setFinancials({
             income: realTotalIncome,
             expenses: realTotalExpenses,
+            production_cost: realTotalCost,
             balance: realTotalIncome - realTotalExpenses - realTotalCost
         })
 
@@ -72,13 +84,13 @@ export default function Dashboard() {
             type: 'expense',
             amount: e.amount,
             description: e.description || 'Gasto',
-            date: e.date, // Note: date might be YYYY-MM-DD or ISO
+            date: e.date,
             icon: TrendingDown
         })) || []
 
         const combined = [...incomeItems, ...expenseItems]
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-            .slice(0, 10) // Show last 10 movements
+            .slice(0, 10)
 
         setHistory(combined)
     }
@@ -88,43 +100,49 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 pb-20"> {/* pb-20 for mobile nav if added later */}
-
+        <div className="min-h-screen bg-slate-50 pb-20">
             {/* Header */}
-            <header className="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+            <header className="bg-white border-b px-6 py-4 flex justify-between items-center sticky top-0 z-10 shadow-sm">
                 <div>
                     <h1 className="text-xl font-bold text-slate-900">Austral Prints 3D</h1>
-                    <p className="text-xs text-slate-500">{user?.email}</p>
+                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{user?.email}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-500">
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-400 hover:text-red-500 transition-colors">
                     Salir
                 </Button>
             </header>
 
             <main className="p-4 space-y-6 max-w-lg mx-auto">
 
-                {/* Financial Overview Card */}
-                <Card className="bg-slate-900 text-white border-none shadow-xl">
-                    <CardContent className="p-6">
-                        <p className="text-slate-400 text-sm font-medium mb-1">Balance Total</p>
-                        <div className="text-4xl font-bold mb-6">
+                {/* Main Balance Card */}
+                <Card className="bg-slate-900 text-white border-none shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-indigo-500/20 transition-all" />
+                    <CardContent className="p-6 relative z-10">
+                        <div className="flex justify-between items-start mb-2">
+                            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Balance Neto Real</p>
+                            {stock && (
+                                <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold ${stock.stock_grams < 150 ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-green-500/20 text-green-400'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${stock.stock_grams < 150 ? 'bg-red-400' : 'bg-green-400'}`} />
+                                    {stock.stock_grams}g Stock
+                                </div>
+                            )}
+                        </div>
+                        <div className="text-5xl font-black mb-8 tracking-tighter">
                             ${financials.balance.toLocaleString('es-CL')}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-slate-800/50 p-3 rounded-lg">
-                                <div className="flex items-center gap-2 text-green-400 mb-1">
-                                    <TrendingUp size={16} />
-                                    <span className="text-xs font-bold">INGRESOS</span>
-                                </div>
-                                <p className="text-lg font-semibold">${financials.income.toLocaleString('es-CL')}</p>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-white/5 p-2 rounded-xl backdrop-blur-sm border border-white/5">
+                                <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Ingresos</p>
+                                <p className="text-sm font-bold text-green-400">${financials.income.toLocaleString('es-CL')}</p>
                             </div>
-                            <div className="bg-slate-800/50 p-3 rounded-lg">
-                                <div className="flex items-center gap-2 text-red-400 mb-1">
-                                    <TrendingDown size={16} />
-                                    <span className="text-xs font-bold">GASTOS</span>
-                                </div>
-                                <p className="text-lg font-semibold">${financials.expenses.toLocaleString('es-CL')}</p>
+                            <div className="bg-white/5 p-2 rounded-xl backdrop-blur-sm border border-white/5">
+                                <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Gastos</p>
+                                <p className="text-sm font-bold text-slate-300">${financials.expenses.toLocaleString('es-CL')}</p>
+                            </div>
+                            <div className="bg-white/5 p-2 rounded-xl backdrop-blur-sm border border-white/5">
+                                <p className="text-[9px] text-slate-400 font-bold uppercase mb-1">Costos</p>
+                                <p className="text-sm font-bold text-rose-400">${financials.production_cost.toLocaleString('es-CL')}</p>
                             </div>
                         </div>
                     </CardContent>
