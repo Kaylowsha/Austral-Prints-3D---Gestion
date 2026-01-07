@@ -31,9 +31,11 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [products, setProducts] = useState<any[]>([])
+    const [inventory, setInventory] = useState<any[]>([])
 
     const [formData, setFormData] = useState({
         product_id: '',
+        inventory_id: '',
         description: '',
         price: '',
         deadline: ''
@@ -42,12 +44,23 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
     useEffect(() => {
         if (open) {
             fetchProducts()
+            fetchInventory()
         }
     }, [open])
 
     const fetchProducts = async () => {
         const { data } = await supabase.from('products').select('*').order('name')
         if (data) setProducts(data)
+    }
+
+    const fetchInventory = async () => {
+        const { data } = await supabase
+            .from('inventory')
+            .select('*')
+            .eq('type', 'Filamento')
+            .gt('stock_grams', 0)
+            .order('name')
+        if (data) setInventory(data)
     }
 
     const handleProductChange = (productId: string) => {
@@ -57,8 +70,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                 ...formData,
                 product_id: productId,
                 description: product.name,
-                price: product.base_price.toString(),
-                deadline: ''
+                price: product.base_price.toString()
             })
         }
     }
@@ -76,9 +88,10 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
             const { data, error } = await supabase.from('orders').insert([
                 {
                     product_id: formData.product_id,
+                    inventory_id: formData.inventory_id || null, // Link to specific filament
                     description: formData.description,
                     price: Number(formData.price),
-                    cost: estimatedCost, // Auto-calculated cost
+                    cost: estimatedCost,
                     deadline: formData.deadline || null,
                     status: 'pendiente',
                     created_at: new Date().toISOString()
@@ -87,7 +100,6 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
 
             if (error) throw error
 
-            // Log Audit Action
             if (data && data[0]) {
                 await logAuditAction(
                     'CREATE_ORDER',
@@ -99,7 +111,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
 
             toast.success('Pedido registrado')
             setOpen(false)
-            setFormData({ product_id: '', description: '', price: '', deadline: '' })
+            setFormData({ product_id: '', inventory_id: '', description: '', price: '', deadline: '' })
             if (onSuccess) onSuccess()
 
         } catch (error: any) {
@@ -121,14 +133,14 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                 <DialogHeader>
                     <DialogTitle>Nuevo Pedido</DialogTitle>
                     <DialogDescription>
-                        Registra un nuevo encargo para empezar a imprimir.
+                        Registra un nuevo encargo vinculándolo a un material.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="grid gap-4 py-4">
 
                     <div className="grid gap-2">
                         <Label>Producto</Label>
-                        <Select onValueChange={handleProductChange}>
+                        <Select onValueChange={handleProductChange} value={formData.product_id}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Selecciona un producto..." />
                             </SelectTrigger>
@@ -143,11 +155,30 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     </div>
 
                     <div className="grid gap-2">
+                        <Label>Material (Color/Rollo)</Label>
+                        <Select onValueChange={(val) => setFormData({ ...formData, inventory_id: val })} value={formData.inventory_id}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecciona el material..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {inventory.map(item => (
+                                    <SelectItem key={item.id} value={item.id}>
+                                        {item.brand} - {item.color} ({item.stock_grams}g)
+                                    </SelectItem>
+                                ))}
+                                {inventory.length === 0 && (
+                                    <SelectItem value="none" disabled>No hay materiales con stock</SelectItem>
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="grid gap-2">
                         <Label>Descripción / Notas</Label>
                         <Input
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
-                            placeholder="Ej: Llavero color Rojo"
+                            placeholder="Ej: Llavero personalizado"
                         />
                     </div>
 

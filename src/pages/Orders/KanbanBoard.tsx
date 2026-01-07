@@ -63,23 +63,37 @@ export default function KanbanBoard() {
                         .maybeSingle()
 
                     if (product && product.weight_grams > 0) {
-                        // 2. Get first available filament
-                        const { data: filament } = await supabase
-                            .from('inventory')
-                            .select('id, stock_grams')
-                            .eq('type', 'Filamento')
-                            .limit(1)
-                            .maybeSingle()
+                        // 2. Determine which roll to deduct from
+                        let targetInventoryId = order.inventory_id
 
-                        if (filament) {
-                            // 3. Deduct weight
-                            const newStock = Math.max(0, filament.stock_grams - product.weight_grams)
-                            await supabase
+                        if (!targetInventoryId) {
+                            const { data: firstFilament } = await supabase
                                 .from('inventory')
-                                .update({ stock_grams: newStock })
-                                .eq('id', filament.id)
+                                .select('id')
+                                .eq('type', 'Filamento')
+                                .limit(1)
+                                .maybeSingle()
+                            targetInventoryId = firstFilament?.id
+                        }
 
-                            toast.success(`Inventario actualizado: -${product.weight_grams}g`)
+                        if (targetInventoryId) {
+                            // 3. Get current stock
+                            const { data: filament } = await supabase
+                                .from('inventory')
+                                .select('id, stock_grams')
+                                .eq('id', targetInventoryId)
+                                .maybeSingle()
+
+                            if (filament) {
+                                // 4. Deduct weight
+                                const newStock = Math.max(0, (filament.stock_grams || 0) - product.weight_grams)
+                                await supabase
+                                    .from('inventory')
+                                    .update({ stock_grams: newStock })
+                                    .eq('id', targetInventoryId)
+
+                                toast.success(`Stock descontado: -${product.weight_grams}g`)
+                            }
                         }
                     }
                 }
