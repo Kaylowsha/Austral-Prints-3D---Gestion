@@ -194,7 +194,7 @@ export default function KanbanBoard() {
                                                         <span className="text-red-500 font-medium">Entrega: {new Date(order.deadline).toLocaleDateString()}</span>
                                                     )}
                                                 </div>
-                                                <span className="font-mono text-slate-600 font-bold">${order.price?.toLocaleString() || 0}</span>
+                                                <span className="font-mono text-slate-600 font-bold">${((order.price || 0) * (order.quantity || 1)).toLocaleString() || 0}</span>
                                             </div>
 
                                             {/* Action Buttons */}

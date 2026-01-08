@@ -88,13 +88,13 @@ export default function FinancePage() {
         const realized_orders = orders?.filter(o => ['terminado', 'entregado'].includes(o.status)) || []
         const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
 
-        const op_income = realized_orders.filter(o => o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
-        const floating = pending_orders.filter(o => o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+        const op_income = realized_orders.filter(o => o.product_id).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
+        const floating = pending_orders.filter(o => o.product_id).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
 
         const op_expenses = expenses?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
         const prod_cost = realized_orders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
-        const injections = realized_orders.filter(o => !o.product_id).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+        const injections = realized_orders.filter(o => !o.product_id).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
         const inversions = expenses?.filter(e => e.category === 'inversion').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
         const withdrawals = expenses?.filter(e => e.category === 'retiro').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
@@ -138,13 +138,13 @@ export default function FinancePage() {
         let runningBalance = 0
         const historyData = timeline.map(date => {
             const dayOpIncome = orders?.filter(o => o.product_id && (o.date || o.created_at).startsWith(date))
-                .reduce((acc, curr) => acc + (curr.price || 0), 0) || 0
+                .reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
             const dayOpExpense = expenses?.filter(e => !['retiro', 'inversion'].includes(e.category) && e.date === date)
                 .reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
             const dayProdCost = orders?.filter(o => (o.date || o.created_at).startsWith(date))
                 .reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
-            const dayInjections = (realized_orders.filter(o => !o.product_id && (o.date || o.created_at).startsWith(date)).reduce((acc, curr) => acc + (curr.price || 0), 0) || 0) +
+            const dayInjections = (realized_orders.filter(o => !o.product_id && (o.date || o.created_at).startsWith(date)).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0) +
                 (expenses?.filter(e => e.category === 'inversion' && e.date === date).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0)
 
             const dayWithdrawals = expenses?.filter(e => e.category === 'retiro' && e.date === date)
@@ -170,7 +170,7 @@ export default function FinancePage() {
             id: o.id,
             type: 'income',
             category: o.product_id ? 'Venta' : 'Capital',
-            amount: o.price,
+            amount: o.price * (o.quantity || 1),
             description: o.description || (o.products as any)?.name || 'Venta',
             date: o.date || o.created_at,
             author: (o.profiles as any)?.email?.split('@')[0] || 'Socio'
