@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
-import { Package, Plus, Trash2, Droplets, Search, X } from 'lucide-react'
+import { Package, Plus, Trash2, Droplets, Search, X, Pencil, DollarSign } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -31,11 +31,13 @@ export default function InventoryPage() {
         brand: '',
         color: '',
         material_type: 'PLA',
-        stock_grams: ''
+        stock_grams: '',
+        price_per_kg: '15000'
     })
     const [searchQuery, setSearchQuery] = useState('')
     const [filterType, setFilterType] = useState('Todos')
     const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+    const [itemToEdit, setItemToEdit] = useState<any | null>(null)
 
     useEffect(() => {
         fetchInitialData()
@@ -61,25 +63,61 @@ export default function InventoryPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         try {
-            const { error } = await supabase.from('inventory').insert([{
+            const payload = {
                 ...formData,
                 type: 'Filamento',
                 stock_grams: Number(formData.stock_grams),
+                price_per_kg: Number(formData.price_per_kg),
                 status: Number(formData.stock_grams) < 150 ? 'bajo_stock' : 'disponible'
-            }])
+            }
+
+            let error;
+            if (itemToEdit) {
+                const { error: err } = await supabase.from('inventory').update(payload).eq('id', itemToEdit.id)
+                error = err
+            } else {
+                const { error: err } = await supabase.from('inventory').insert([payload])
+                error = err
+            }
+
             if (error) throw error
-            toast.success('Material agregado')
+            toast.success(itemToEdit ? 'Material actualizado' : 'Material agregado')
             setOpen(false)
-            setFormData({ name: '', brand: '', color: '', material_type: 'PLA', stock_grams: '' })
+            resetForm()
             fetchInitialData()
         } catch (error: any) {
             toast.error(error.message)
         }
     }
 
+    const resetForm = () => {
+        setFormData({ name: '', brand: '', color: '', material_type: 'PLA', stock_grams: '', price_per_kg: '15000' })
+        setItemToEdit(null)
+    }
+
+    const handleEdit = (item: any) => {
+        setItemToEdit(item)
+        setFormData({
+            name: item.name,
+            brand: item.brand || '',
+            color: item.color,
+            material_type: item.material_type,
+            stock_grams: item.stock_grams.toString(),
+            price_per_kg: (item.price_per_kg || 15000).toString()
+        })
+        setOpen(true)
+    }
+
     const deleteItem = async () => {
         if (!itemToDelete) return
-        await supabase.from('inventory').delete().eq('id', itemToDelete)
+        const { error } = await supabase.from('inventory').delete().eq('id', itemToDelete)
+
+        if (error) {
+            toast.error('Error al eliminar: ' + error.message)
+            console.error(error)
+            return
+        }
+
         setItemToDelete(null)
         fetchInitialData()
         toast.success('Material eliminado')
@@ -115,7 +153,7 @@ export default function InventoryPage() {
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
-                        <DialogHeader><DialogTitle>Agregar Material</DialogTitle></DialogHeader>
+                        <DialogHeader><DialogTitle>{itemToEdit ? 'Editar Material' : 'Agregar Material'}</DialogTitle></DialogHeader>
                         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                             <div className="grid gap-2">
                                 <Label>Nombre descriptivo</Label>
@@ -137,12 +175,16 @@ export default function InventoryPage() {
                                     <Input value={formData.material_type} onChange={e => setFormData({ ...formData, material_type: e.target.value })} />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label>Gramos Iniciales</Label>
+                                    <Label>Gramos Disponibles</Label>
                                     <Input type="number" required value={formData.stock_grams} onChange={e => setFormData({ ...formData, stock_grams: e.target.value })} />
                                 </div>
                             </div>
+                            <div className="grid gap-2 border-t pt-4">
+                                <Label className="text-indigo-600 font-bold">Precio por Kilo ($)</Label>
+                                <Input type="number" required value={formData.price_per_kg} onChange={e => setFormData({ ...formData, price_per_kg: e.target.value })} />
+                            </div>
                             <DialogFooter>
-                                <Button type="submit" className="w-full bg-indigo-600">Guardar Material</Button>
+                                <Button type="submit" className="w-full bg-indigo-600">{itemToEdit ? 'Actualizar Cambios' : 'Guardar Material'}</Button>
                             </DialogFooter>
                         </form>
                     </DialogContent>
@@ -262,9 +304,14 @@ export default function InventoryPage() {
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.brand} • {item.material_type}</p>
                                         </div>
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item.id)} className="text-slate-200 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all">
-                                        <Trash2 size={16} />
-                                    </Button>
+                                    <div className="flex gap-1">
+                                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} className="text-slate-300 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-all">
+                                            <Pencil size={16} />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => setItemToDelete(item.id)} className="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all">
+                                            <Trash2 size={16} />
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <div className="flex items-end justify-between mt-8">
@@ -280,6 +327,10 @@ export default function InventoryPage() {
                                                 <div className="h-full bg-green-500" style={{ width: `${Math.min(100, (item.stock_grams / 1000) * 100)}%` }} />
                                             </div>
                                         )}
+                                        <p className="text-[10px] font-bold text-slate-400 mt-2 flex items-center gap-1">
+                                            <DollarSign size={10} className="text-emerald-500" />
+                                            ${(item.price_per_kg || 15000).toLocaleString('es-CL')} / kg
+                                        </p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-3xl font-black text-slate-900 leading-none tracking-tighter">{item.stock_grams}g</p>
