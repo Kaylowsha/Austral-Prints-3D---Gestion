@@ -32,9 +32,13 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [inventory, setInventory] = useState<any[]>([])
+    const [clients, setClients] = useState<any[]>([])
 
     const [formData, setFormData] = useState({
         description: order.description || '',
+        client_id: order.client_id || '',
+        custom_client_name: order.custom_client_name || '',
+        useCustomClient: !!order.custom_client_name,
         price: order.price?.toString() || '0',
         suggested_price: order.suggested_price?.toString() || '0',
         cost: order.cost?.toString() || '0',
@@ -54,8 +58,14 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
     useEffect(() => {
         if (open) {
             fetchInventory()
+            fetchClients()
         }
     }, [open])
+
+    const fetchClients = async () => {
+        const { data } = await supabase.from('clients').select('*').order('full_name')
+        if (data) setClients(data)
+    }
 
     const fetchInventory = async () => {
         const { data } = await supabase
@@ -97,6 +107,8 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                 .from('orders')
                 .update({
                     description: formData.description,
+                    client_id: formData.useCustomClient ? null : formData.client_id,
+                    custom_client_name: formData.useCustomClient ? formData.custom_client_name : null,
                     price: Number(formData.price),
                     suggested_price: Number(formData.suggested_price),
                     cost: Number(formData.cost),
@@ -140,7 +152,38 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                 <form onSubmit={handleSubmit} className="grid gap-6 py-4">
 
                     <div className="grid gap-2">
-                        <Label>Descripción / Cliente</Label>
+                        <div className="flex items-center justify-between">
+                            <Label>Cliente</Label>
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, useCustomClient: !formData.useCustomClient })}
+                                className="text-[10px] font-bold text-indigo-600 uppercase hover:underline"
+                            >
+                                {formData.useCustomClient ? 'Elegir registrado' : 'Ingresar manual'}
+                            </button>
+                        </div>
+                        {formData.useCustomClient ? (
+                            <Input
+                                placeholder="Nombre completo del cliente..."
+                                value={formData.custom_client_name}
+                                onChange={e => setFormData({ ...formData, custom_client_name: e.target.value })}
+                            />
+                        ) : (
+                            <Select onValueChange={(val) => setFormData({ ...formData, client_id: val })} value={formData.client_id}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar cliente registrado..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {clients.map(c => (
+                                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Descripción del Pedido (Producto)</Label>
                         <Input
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}

@@ -80,7 +80,9 @@ const QuotationPage = () => {
     const [orderData, setOrderData] = useState({
         clientId: '',
         description: '',
-        finalPrice: 0
+        finalPrice: 0,
+        customClientName: '',
+        useCustomClient: true
     });
 
     useEffect(() => {
@@ -127,7 +129,8 @@ const QuotationPage = () => {
 
         try {
             const { error } = await supabase.from('orders').insert([{
-                client_id: orderData.clientId,
+                client_id: orderData.useCustomClient ? null : orderData.clientId,
+                custom_client_name: orderData.useCustomClient ? orderData.customClientName : null,
                 description: orderData.description,
                 price: Number(orderData.finalPrice), // El que el usuario decide cobrar
                 suggested_price: results.finalPrice, // El técnico calculado por la app
@@ -150,7 +153,7 @@ const QuotationPage = () => {
 
             toast.success('¡Pedido creado con éxito!');
             setIsConverting(false);
-            setOrderData({ clientId: '', description: '', finalPrice: 0 });
+            setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true });
         } catch (err: any) {
             toast.error('Error al crear pedido', { description: err.message });
         }
@@ -491,17 +494,34 @@ const QuotationPage = () => {
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label>Cliente</Label>
-                            <Select onValueChange={(val) => setOrderData({ ...orderData, clientId: val })}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccionar cliente..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {clients.map(c => (
-                                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex items-center justify-between">
+                                <Label>Cliente</Label>
+                                <button
+                                    onClick={() => setOrderData({ ...orderData, useCustomClient: !orderData.useCustomClient })}
+                                    className="text-[10px] font-bold text-indigo-600 uppercase hover:underline"
+                                >
+                                    {orderData.useCustomClient ? 'Elegir registrado' : 'Ingresar manual'}
+                                </button>
+                            </div>
+
+                            {orderData.useCustomClient ? (
+                                <Input
+                                    placeholder="Nombre del cliente..."
+                                    value={orderData.customClientName}
+                                    onChange={e => setOrderData({ ...orderData, customClientName: e.target.value })}
+                                />
+                            ) : (
+                                <Select onValueChange={(val) => setOrderData({ ...orderData, clientId: val })}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Seleccionar cliente..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {clients.map(c => (
+                                            <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
                         </div>
                         <div className="grid gap-2">
                             <Label>Descripción del Pedido</Label>

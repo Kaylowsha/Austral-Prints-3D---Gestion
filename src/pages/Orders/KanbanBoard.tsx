@@ -179,11 +179,16 @@ export default function KanbanBoard() {
                                     <Card key={order.id} className={`hover:shadow-md transition-all shadow-sm bg-white border-0 ${isUpdating[order.id] ? 'opacity-50 cursor-wait' : 'cursor-default'}`}>
                                         <CardContent className="p-3 space-y-2">
                                             <div className="flex justify-between items-start">
-                                                <p className="font-semibold text-sm text-slate-800 line-clamp-2">
-                                                    {order.description || order.products?.name || 'Sin descripción'}
-                                                </p>
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-[10px] text-slate-800 uppercase leading-tight mb-1">
+                                                        {order.custom_client_name || order.clients?.full_name || 'Sin Cliente'}
+                                                    </span>
+                                                    <p className="font-semibold text-xs text-slate-500 line-clamp-2">
+                                                        {order.description || order.products?.name || 'Sin descripción'}
+                                                    </p>
+                                                </div>
                                                 {(order.quantity > 1) && (
-                                                    <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-1.5 py-0.5 rounded-md">
+                                                    <span className="bg-indigo-50 text-indigo-600 text-[9px] font-black px-1.5 py-0.5 rounded-md border border-indigo-100">
                                                         x{order.quantity}
                                                     </span>
                                                 )}
