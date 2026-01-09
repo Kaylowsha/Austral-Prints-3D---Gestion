@@ -12,6 +12,7 @@ import KanbanBoard from '@/pages/Orders/KanbanBoard'
 import FinancePage from '@/pages/Finance/FinancePage'
 import InventoryPage from '@/pages/Inventory/InventoryPage'
 import AuditPage from '@/pages/AuditPage'
+import QuotationPage from '@/pages/Quotation/QuotationPage'
 
 // Placeholders to avoid build errors if files missing
 // const OrdersPage = () => <div className="p-4">Pedidos (En construcción)</div>
@@ -52,6 +53,7 @@ function App() {
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/orders" element={<KanbanBoard />} />
             <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/quotation" element={<QuotationPage />} />
             <Route path="/audit" element={<AuditPage />} />
           </Route>
         ) : (
