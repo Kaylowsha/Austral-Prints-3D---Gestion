@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Zap, Clock, TrendingUp, AlertCircle, Save, ArrowRight, Plus, Trash2, Settings2, Package2 } from 'lucide-react';
+import { Calculator, Zap, Clock, AlertCircle, Save, ArrowRight, Plus, Trash2, Settings2, Package2 } from 'lucide-react';
 
 interface Filament {
     id: string;
