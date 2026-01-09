@@ -42,7 +42,8 @@ export default function FinancePage() {
         injections: 0,
         withdrawals: 0,
         inversions: 0,
-        floating: 0
+        floating: 0,
+        suggested_income: 0
     })
     const [timeframe, setTimeframe] = useState<'7d' | '30d' | 'month' | 'all'>('30d')
     const [categoryData, setCategoryData] = useState<any[]>([])
@@ -89,6 +90,7 @@ export default function FinancePage() {
         const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
 
         const op_income = realized_orders.filter(o => o.product_id).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
+        const suggested_income = realized_orders.filter(o => o.product_id).reduce((acc, curr) => acc + ((curr.suggested_price || curr.price || 0) * (curr.quantity || 1)), 0) || 0
         const floating = pending_orders.filter(o => o.product_id).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
 
         const op_expenses = expenses?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
@@ -111,7 +113,8 @@ export default function FinancePage() {
             injections,
             withdrawals,
             inversions,
-            floating
+            floating,
+            suggested_income
         })
 
         // 2. Format Category Data (Operational only)
@@ -150,6 +153,9 @@ export default function FinancePage() {
             const dayWithdrawals = expenses?.filter(e => e.category === 'retiro' && e.date === date)
                 .reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
+            const dayOpSuggested = orders?.filter(o => o.product_id && (o.date || o.created_at).startsWith(date))
+                .reduce((acc, curr) => acc + ((curr.suggested_price || curr.price || 0) * (curr.quantity || 1)), 0) || 0
+
             const dayNet = dayOpIncome - dayOpExpense - dayProdCost + dayInjections - dayWithdrawals
             runningBalance += dayNet
 
@@ -157,6 +163,7 @@ export default function FinancePage() {
                 date,
                 displayDate: new Date(date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
                 ingresos: dayOpIncome,
+                sugerido: dayOpSuggested,
                 gastos: dayOpExpense + dayProdCost,
                 balance: runningBalance,
                 net: dayNet
@@ -284,6 +291,12 @@ export default function FinancePage() {
                     icon={<TrendingUp className="text-indigo-600" />}
                     subValue="Dinero líquido disponible"
                 />
+                <MetricCard
+                    title="Diferencia Comercial"
+                    value={`${stats.income >= stats.suggested_income ? '+' : ''}${(stats.income - stats.suggested_income).toLocaleString('es-CL')}`}
+                    icon={<PieChartIcon className={stats.income >= stats.suggested_income ? 'text-emerald-500' : 'text-rose-500'} />}
+                    subValue={stats.income >= stats.suggested_income ? 'Cobrando sobre el sugerido' : 'Cobrando bajo el sugerido'}
+                />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -372,6 +385,39 @@ export default function FinancePage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Comparativa Sugerido vs Real */}
+                <Card className="shadow-sm border-slate-200">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                        <div>
+                            <CardTitle className="text-base font-bold">Rendimiento Comercial</CardTitle>
+                            <CardDescription>Sugerido Técnico vs Cobrado Real</CardDescription>
+                        </div>
+                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <BarChart3 size={20} />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={dailyData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis
+                                    dataKey="displayDate"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                    interval={timeframe === '7d' ? 0 : 4}
+                                />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Bar dataKey="sugerido" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={timeframe === '7d' ? 12 : 8} name="Sugerido" />
+                                <Bar dataKey="ingresos" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={timeframe === '7d' ? 12 : 8} name="Cobrado" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
                 {/* Ingresos vs Gastos Diarios */}
                 <Card className="shadow-sm border-slate-200">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0">

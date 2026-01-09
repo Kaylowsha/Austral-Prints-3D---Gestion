@@ -79,12 +79,16 @@ const QuotationPage = () => {
     const [clients, setClients] = useState<any[]>([]);
     const [orderData, setOrderData] = useState({
         clientId: '',
-        description: ''
+        description: '',
+        finalPrice: 0
     });
 
     useEffect(() => {
-        if (isConverting) fetchClients();
-    }, [isConverting]);
+        if (isConverting) {
+            fetchClients();
+            setOrderData(prev => ({ ...prev, finalPrice: Math.round(results.finalPrice) }));
+        }
+    }, [isConverting, results.finalPrice]);
 
     const fetchClients = async () => {
         const { data } = await supabase.from('clients').select('*').order('full_name');
@@ -125,7 +129,8 @@ const QuotationPage = () => {
             const { error } = await supabase.from('orders').insert([{
                 client_id: orderData.clientId,
                 description: orderData.description,
-                price: results.finalPrice,
+                price: Number(orderData.finalPrice), // El que el usuario decide cobrar
+                suggested_price: results.finalPrice, // El técnico calculado por la app
                 cost: results.totalOperationalCost,
                 status: 'pendiente',
                 quantity: 1,
@@ -145,7 +150,7 @@ const QuotationPage = () => {
 
             toast.success('¡Pedido creado con éxito!');
             setIsConverting(false);
-            setOrderData({ clientId: '', description: '' });
+            setOrderData({ clientId: '', description: '', finalPrice: 0 });
         } catch (err: any) {
             toast.error('Error al crear pedido', { description: err.message });
         }
@@ -505,6 +510,17 @@ const QuotationPage = () => {
                                 value={orderData.description}
                                 onChange={e => setOrderData({ ...orderData, description: e.target.value })}
                             />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Precio Final a Cobrar ($)</Label>
+                            <Input
+                                type="number"
+                                placeholder="4500"
+                                value={orderData.finalPrice}
+                                onChange={e => setOrderData({ ...orderData, finalPrice: Number(e.target.value) })}
+                                className="text-xl font-black text-indigo-600"
+                            />
+                            <p className="text-[10px] text-slate-400 italic">Sugerencia técnica: ${results.finalPrice.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</p>
                         </div>
                         <div className="bg-slate-50 p-4 rounded-xl space-y-2">
                             <p className="text-xs font-bold text-slate-400 uppercase">Resumen Técnico para el Pedido</p>

@@ -36,6 +36,7 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
     const [formData, setFormData] = useState({
         description: order.description || '',
         price: order.price?.toString() || '0',
+        suggested_price: order.suggested_price?.toString() || '0',
         cost: order.cost?.toString() || '0',
         quantity: order.quantity?.toString() || '1',
         deadline: order.deadline || '',
@@ -79,10 +80,12 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
         const results = calculateQuotation(params)
         setFormData({
             ...formData,
-            price: results.finalPrice.toFixed(0),
+            suggested_price: results.finalPrice.toFixed(0),
+            // No cambiamos el precio 'price' (cobrado) automáticamente para no sobreescribir decisiones del usuario,
+            // pero le damos el dato para que él lo ajuste si quiere.
             cost: results.totalOperationalCost.toFixed(0)
         })
-        toast.info(`Precio recalculado: $${results.finalPrice.toLocaleString()}`)
+        toast.info(`Nuevo sugerido técnico: $${results.finalPrice.toLocaleString()}`)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -95,6 +98,7 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                 .update({
                     description: formData.description,
                     price: Number(formData.price),
+                    suggested_price: Number(formData.suggested_price),
                     cost: Number(formData.cost),
                     quantity: Number(formData.quantity),
                     deadline: formData.deadline || null,
@@ -195,12 +199,21 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
 
                     <div className="flex justify-between items-center gap-4">
                         <div className="flex-1">
-                            <Label>Precio Unitario ($)</Label>
+                            <Label>Precio Final Cobrado ($)</Label>
                             <Input
                                 type="number"
                                 value={formData.price}
                                 onChange={e => setFormData({ ...formData, price: e.target.value })}
                                 className="text-xl font-black text-indigo-600"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <Label>Precio Sugerido (App) ($)</Label>
+                            <Input
+                                type="number"
+                                value={formData.suggested_price}
+                                onChange={e => setFormData({ ...formData, suggested_price: e.target.value })}
+                                className="text-xl font-bold text-slate-400 bg-slate-50"
                             />
                         </div>
                         <Button type="button" variant="outline" onClick={handleRecalculate} className="mt-6 gap-2 border-dashed">
