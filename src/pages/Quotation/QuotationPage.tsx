@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 interface FilamentProfile {
     id: string;
+    name: string;
     material_type: string;
     brand: string;
     color: string;
@@ -275,7 +276,7 @@ const QuotationPage = () => {
                                     <SelectContent>
                                         {inventory.map((mat) => (
                                             <SelectItem key={mat.id} value={mat.id}>
-                                                {mat.brand} {mat.color} ({mat.material_type}) - ${mat.price_per_kg}/kg
+                                                {mat.name} - {mat.brand} {mat.color} ({mat.material_type})
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
