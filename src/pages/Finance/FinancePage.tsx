@@ -19,10 +19,13 @@ import { toast } from 'sonner'
 import {
     BarChart,
     Bar,
+    LineChart,
+    Line,
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
+    Legend,
     ResponsiveContainer,
     Cell,
     PieChart,
@@ -398,7 +401,7 @@ export default function FinancePage() {
                     </CardHeader>
                     <CardContent className="h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={dailyData}>
+                            <LineChart data={dailyData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                 <XAxis
                                     dataKey="displayDate"
@@ -411,9 +414,25 @@ export default function FinancePage() {
                                 <Tooltip
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                 />
-                                <Bar dataKey="sugerido" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={timeframe === '7d' ? 12 : 8} name="Sugerido" />
-                                <Bar dataKey="ingresos" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={timeframe === '7d' ? 12 : 8} name="Cobrado" />
-                            </BarChart>
+                                <Legend verticalAlign="top" height={36} />
+                                <Line
+                                    type="monotone"
+                                    dataKey="sugerido"
+                                    stroke="#94a3b8"
+                                    strokeWidth={2}
+                                    dot={false}
+                                    name="Sugerido"
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="ingresos"
+                                    stroke="#6366f1"
+                                    strokeWidth={3}
+                                    dot={{ r: 4, fill: '#6366f1' }}
+                                    activeDot={{ r: 6 }}
+                                    name="Cobrado"
+                                />
+                            </LineChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
