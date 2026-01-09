@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import OrderDialog from './OrderDialog'
+import EditOrderDialog from './EditOrderDialog'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { XCircle } from 'lucide-react'
 
@@ -214,6 +215,8 @@ export default function KanbanBoard() {
                                                         </Button>
                                                     }
                                                 />
+
+                                                <EditOrderDialog order={order} onSuccess={fetchOrders} />
 
                                                 {col.id !== 'entregado' && (
                                                     <Button

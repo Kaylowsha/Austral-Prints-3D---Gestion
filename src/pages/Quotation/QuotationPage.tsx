@@ -1,5 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Zap, Clock, TrendingUp, Save, Plus, Trash2, Settings2, Package2 } from 'lucide-react';
+import { Calculator, Zap, Clock, Save, Plus, Trash2, Settings2, Package2, ShoppingBag, TrendingUp } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { calculateQuotation, type QuotationParams } from '@/lib/quotation';
+import { toast } from 'sonner';
+
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Filament {
     id: string;
@@ -60,39 +75,80 @@ const QuotationPage = () => {
 
     const [newFilament, setNewFilament] = useState({ name: '', price: 0, power: 100 });
     const [showMgmt, setShowMgmt] = useState(false);
+    const [isConverting, setIsConverting] = useState(false);
+    const [clients, setClients] = useState<any[]>([]);
+    const [orderData, setOrderData] = useState({
+        clientId: '',
+        description: ''
+    });
+
+    useEffect(() => {
+        if (isConverting) fetchClients();
+    }, [isConverting]);
+
+    const fetchClients = async () => {
+        const { data } = await supabase.from('clients').select('*').order('full_name');
+        if (data) setClients(data);
+    };
 
     useEffect(() => {
         calculateCosts();
     }, [config, project]);
 
     const calculateCosts = () => {
-        const totalHours = project.printTimeHours + (project.printTimeMinutes / 60);
         const selectedFilament = config.filaments.find(f => f.id === config.selectedFilamentId) || config.filaments[0];
 
-        // 1. Costo Material
-        const costPerGram = selectedFilament ? selectedFilament.price / selectedFilament.weight : 0;
-        const materialCost = project.filamentGrams * costPerGram;
+        const params: QuotationParams = {
+            grams: project.filamentGrams,
+            hours: project.printTimeHours,
+            minutes: project.printTimeMinutes,
+            materialPricePerKg: selectedFilament?.price || 0,
+            electricityCostPerKwh: config.electricityCost,
+            printerPowerWatts: selectedFilament?.power || 100,
+            opMultiplier: config.operationalMultiplier,
+            salesMultiplier: config.salesMultiplier
+        };
 
-        // 2. Costo Energía (Usando los Watts del filamento seleccionado)
-        const currentPower = selectedFilament ? selectedFilament.power : 100;
-        const energyCost = (currentPower / 1000) * totalHours * config.electricityCost;
+        const calc = calculateQuotation(params);
+        setResults(calc);
+    };
 
-        // 3. Costo Directo
-        const directCost = materialCost + energyCost;
+    const handleGenerateOrder = async () => {
+        if (!orderData.clientId || !orderData.description) {
+            toast.error('Completa los datos del pedido');
+            return;
+        }
 
-        // 4. Costo Total Operativo (* Multiplicador)
-        const totalOperationalCost = directCost * config.operationalMultiplier;
+        const selectedFilament = config.filaments.find(f => f.id === config.selectedFilamentId);
 
-        // 5. Precio de Venta (* Multiplicador)
-        const finalPrice = totalOperationalCost * config.salesMultiplier;
+        try {
+            const { error } = await supabase.from('orders').insert([{
+                client_id: orderData.clientId,
+                description: orderData.description,
+                price: results.finalPrice,
+                cost: results.totalOperationalCost,
+                status: 'pendiente',
+                quantity: 1,
+                // New technical fields
+                quoted_grams: project.filamentGrams,
+                quoted_hours: project.printTimeHours,
+                quoted_mins: project.printTimeMinutes,
+                quoted_power_watts: selectedFilament?.power || 100,
+                quoted_op_multiplier: config.operationalMultiplier,
+                quoted_sales_multiplier: config.salesMultiplier,
+                quoted_material_price: selectedFilament?.price || 0,
+                // Linking to material if possible
+                inventory_id: null // Ideally select a specific roll here too, or leave null for now
+            }]);
 
-        setResults({
-            materialCost,
-            energyCost,
-            directCost,
-            totalOperationalCost,
-            finalPrice
-        });
+            if (error) throw error;
+
+            toast.success('¡Pedido creado con éxito!');
+            setIsConverting(false);
+            setOrderData({ clientId: '', description: '' });
+        } catch (err: any) {
+            toast.error('Error al crear pedido', { description: err.message });
+        }
     };
 
     const handleSaveConfig = () => {
@@ -395,6 +451,16 @@ const QuotationPage = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            <div className="pt-4">
+                                <button
+                                    onClick={() => setIsConverting(true)}
+                                    className="w-full bg-indigo-600 text-white p-4 rounded-3xl font-bold flex items-center justify-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200"
+                                >
+                                    <ShoppingBag size={20} />
+                                    Generar Pedido Real
+                                </button>
+                            </div>
                         </div>
 
                         <div className="bg-slate-800/40 p-5 rounded-3xl flex items-start gap-4 border border-slate-700/50 backdrop-blur-sm relative">
@@ -408,6 +474,58 @@ const QuotationPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Convert to Order Dialog */}
+            <Dialog open={isConverting} onOpenChange={setIsConverting}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Convertir Cotización en Pedido</DialogTitle>
+                        <DialogDescription>
+                            Se creará un nuevo pedido con el precio de <strong>${results.finalPrice.toLocaleString('es-CL')}</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label>Cliente</Label>
+                            <Select onValueChange={(val) => setOrderData({ ...orderData, clientId: val })}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar cliente..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {clients.map(c => (
+                                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Descripción del Pedido</Label>
+                            <Input
+                                placeholder="Ej: Llavero 3D Personalizado"
+                                value={orderData.description}
+                                onChange={e => setOrderData({ ...orderData, description: e.target.value })}
+                            />
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-xl space-y-2">
+                            <p className="text-xs font-bold text-slate-400 uppercase">Resumen Técnico para el Pedido</p>
+                            <div className="grid grid-cols-2 text-xs text-slate-600">
+                                <span>Material: {selectedFilament?.name}</span>
+                                <span>Peso: {project.filamentGrams}g</span>
+                                <span>Tiempo: {project.printTimeHours}h {project.printTimeMinutes}m</span>
+                                <span>Costo Operativo: ${results.totalOperationalCost.toLocaleString('es-CL')}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <button
+                            onClick={handleGenerateOrder}
+                            className="w-full bg-indigo-600 text-white p-3 rounded-xl font-bold hover:bg-indigo-700 transition-all"
+                        >
+                            Crear e Ingresar Pedido
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
