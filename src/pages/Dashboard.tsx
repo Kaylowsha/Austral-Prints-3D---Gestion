@@ -61,9 +61,13 @@ export default function Dashboard() {
         const realizedOrders = allOrders?.filter(o => ['terminado', 'entregado'].includes(o.status)) || []
         const pendingOrders = allOrders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
 
-        const realTotalIncome = realizedOrders.filter(o => o.product_id).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
+        const realTotalIncome = realizedOrders
+            .filter(o => o.product_id || (o as any).description !== 'Inyección de Capital')
+            .reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
         const realTotalCost = realizedOrders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
-        const floatingIncome = pendingOrders.filter(o => o.product_id).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
+
+        // Floating: All pending orders
+        const floatingIncome = pendingOrders.reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
 
         const { data: allExpensesData } = await supabase.from('expenses').select('amount, category')
         const realTotalExpenses = allExpensesData?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
@@ -71,7 +75,12 @@ export default function Dashboard() {
         const totalWithdrawals = allExpensesData?.filter(e => e.category === 'retiro').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
         const netProfit = realTotalIncome - realTotalExpenses - realTotalCost
-        const totalInjections = realizedOrders.filter(o => !o.product_id).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
+
+        // Injections: Only explicit Capital Injections
+        const totalInjections = realizedOrders
+            .filter(o => !o.product_id && (o as any).description === 'Inyección de Capital')
+            .reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
+
         const finalBalance = netProfit + totalInjections - totalInversions - totalWithdrawals
 
         setFinancials({
