@@ -412,8 +412,8 @@ export default function FinancePage() {
                         {/* 3 Key Values */}
                         <div className="grid grid-cols-3 gap-2 text-center">
                             <div className="space-y-1">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Costo</p>
-                                <p className="text-sm font-bold text-slate-700">${(stats.expenses - (stats.inversions || 0) - (stats.withdrawals || 0)).toLocaleString('es-CL', { notation: "compact" })}</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Costo Directo</p>
+                                <p className="text-sm font-bold text-slate-700">${stats.production_cost.toLocaleString('es-CL', { notation: "compact" })}</p>
                             </div>
                             <div className="space-y-1 border-x border-slate-100">
                                 <p className="text-[9px] font-bold text-slate-400 uppercase">Sugerido</p>
@@ -431,14 +431,14 @@ export default function FinancePage() {
                             <div>
                                 <div className="flex justify-between items-end mb-1">
                                     <span className="text-xs font-medium text-slate-500">Margen Real (Cobrado vs Costo)</span>
-                                    <span className={`text-xs font-bold ${stats.income > (stats.expenses - stats.inversions - stats.withdrawals) ? 'text-green-600' : 'text-rose-500'}`}>
-                                        {((stats.income - (stats.expenses - stats.inversions - stats.withdrawals)) / Math.max(1, stats.income) * 100).toFixed(1)}%
+                                    <span className={`text-xs font-bold ${stats.income > stats.production_cost ? 'text-green-600' : 'text-rose-500'}`}>
+                                        {((stats.income - stats.production_cost) / Math.max(1, stats.income) * 100).toFixed(1)}%
                                     </span>
                                 </div>
                                 <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                                     <div
                                         className="h-full bg-green-500 rounded-full"
-                                        style={{ width: `${Math.min(100, Math.max(0, ((stats.income - (stats.expenses - stats.inversions - stats.withdrawals)) / Math.max(1, stats.income) * 100)))}%` }}
+                                        style={{ width: `${Math.min(100, Math.max(0, ((stats.income - stats.production_cost) / Math.max(1, stats.income) * 100)))}%` }}
                                     />
                                 </div>
                             </div>
