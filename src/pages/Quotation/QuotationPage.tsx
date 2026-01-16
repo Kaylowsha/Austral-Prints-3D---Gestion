@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Zap, Clock, Save, Package2, ShoppingBag, TrendingUp, Settings2 } from 'lucide-react';
+import { Calculator, Zap, Clock, Save, Package2, ShoppingBag, TrendingUp, Settings2, Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { calculateQuotation, type QuotationParams } from '@/lib/quotation';
 import { toast } from 'sonner';
@@ -24,6 +24,14 @@ interface FilamentProfile {
     color: string;
     price_per_kg: number;
     stock_grams: number;
+}
+
+interface Product {
+    id: string;
+    name: string;
+    weight_grams: number;
+    print_time_mins: number;
+    base_price: number;
 }
 
 interface CostConfig {
@@ -58,6 +66,12 @@ const QuotationPage = () => {
     });
 
     const [inventory, setInventory] = useState<FilamentProfile[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [quotationMode, setQuotationMode] = useState<'custom' | 'product'>('custom');
+    const [selectedProductId, setSelectedProductId] = useState<string>('');
+    const [searchProduct, setSearchProduct] = useState('');
+    const [quantity, setQuantity] = useState(1);
+
     const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
     const [project, setProject] = useState<ProjectData>({
         printTimeHours: 0,
@@ -98,6 +112,11 @@ const QuotationPage = () => {
         }
     };
 
+    const fetchProducts = async () => {
+        const { data } = await supabase.from('products').select('*').order('name');
+        if (data) setProducts(data);
+    };
+
     const fetchClients = async () => {
         const { data } = await supabase.from('clients').select('*').order('full_name');
         if (data) setClients(data);
@@ -105,14 +124,27 @@ const QuotationPage = () => {
 
     useEffect(() => {
         fetchInventory();
+        fetchProducts();
     }, []);
 
     useEffect(() => {
         if (isConverting) {
             fetchClients();
-            setOrderData(prev => ({ ...prev, finalPrice: Math.round(results.finalPrice) }));
+
+            let priceToUse = Math.round(results.finalPrice);
+            if (quotationMode === 'product' && selectedProductId) {
+                const prod = products.find(p => p.id === selectedProductId);
+                if (prod && prod.base_price > 0) {
+                    priceToUse = prod.base_price;
+                }
+            }
+
+            setOrderData(prev => ({
+                ...prev,
+                finalPrice: priceToUse
+            }));
         }
-    }, [isConverting, results.finalPrice]);
+    }, [isConverting, results.finalPrice, quotationMode, selectedProductId, products]);
 
     const getMaterialPower = (type: string) => {
         switch (type?.toUpperCase()) {
@@ -143,6 +175,19 @@ const QuotationPage = () => {
         setResults(calc);
     }, [config, project, selectedMaterialId, inventory]);
 
+    const handleProductSelect = (productId: string) => {
+        setSelectedProductId(productId);
+        const product = products.find(p => p.id === productId);
+        if (product) {
+            setProject({
+                filamentGrams: product.weight_grams || 0,
+                printTimeHours: Math.floor((product.print_time_mins || 0) / 60),
+                printTimeMinutes: (product.print_time_mins || 0) % 60
+            });
+            setOrderData(prev => ({ ...prev, description: product.name }));
+        }
+    };
+
     const handleGenerateOrder = async () => {
         if ((!orderData.clientId && !orderData.useCustomClient) || (!orderData.customClientName && orderData.useCustomClient) || !orderData.description) {
             toast.error('Completa los datos del pedido');
@@ -159,9 +204,9 @@ const QuotationPage = () => {
                 description: orderData.description,
                 price: Number(orderData.finalPrice),
                 suggested_price: results.finalPrice,
-                cost: results.totalOperationalCost,
+                cost: results.totalOperationalCost * quantity,
                 status: 'pendiente',
-                quantity: 1,
+                quantity: quantity,
                 quoted_grams: project.filamentGrams,
                 quoted_hours: project.printTimeHours,
                 quoted_mins: project.printTimeMinutes,
@@ -175,7 +220,10 @@ const QuotationPage = () => {
 
             toast.success('¡Pedido creado con éxito!');
             setIsConverting(false);
+            toast.success('¡Pedido creado con éxito!');
+            setIsConverting(false);
             setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true });
+            setQuantity(1);
         } catch (err: any) {
             toast.error('Error al crear pedido', { description: err.message });
         }
@@ -216,50 +264,118 @@ const QuotationPage = () => {
                 </div>
             </header>
 
-            {showMgmt && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
-                        <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                            <Zap size={20} className="text-indigo-500" />
-                            Precios de Energía y Márgenes
-                        </h2>
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Costo Energía ($ por kWh)</label>
-                                <div className="flex items-center gap-3">
-                                    <Zap size={20} className="text-yellow-500" />
-                                    <input
-                                        type="number"
-                                        value={config.electricityCost}
-                                        onChange={e => setConfig({ ...config, electricityCost: Number(e.target.value) })}
-                                        className="w-full p-2 bg-white border border-slate-200 rounded-lg text-lg font-bold text-slate-700"
-                                    />
-                                </div>
+
+
+            {/* Mode Toggle & Quantity */}
+            <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                <div className="flex bg-slate-100 p-1 rounded-xl self-start">
+                    <button
+                        onClick={() => { setQuotationMode('custom'); setSelectedProductId(''); }}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${quotationMode === 'custom' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Impresión Personalizada
+                    </button>
+                    <button
+                        onClick={() => setQuotationMode('product')}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${quotationMode === 'product' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Producto de Catálogo
+                    </button>
+                </div>
+
+                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 ml-auto">
+                    <span className="text-sm font-bold text-slate-500">Cantidad:</span>
+                    <input
+                        type="number"
+                        min="1"
+                        value={quantity}
+                        onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                        className="w-16 text-center font-bold text-slate-900 outline-none border-b border-transparent focus:border-indigo-500"
+                    />
+                </div>
+            </div>
+
+            {/* Product Selector (Only in Product Mode) */}
+            {
+                quotationMode === 'product' && (
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 animate-in fade-in slide-in-from-top-2">
+                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Seleccionar Producto</h3>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <Input
+                                placeholder="Buscar en el catálogo..."
+                                className="pl-10"
+                                value={searchProduct}
+                                onChange={(e) => setSearchProduct(e.target.value)}
+                            />
+                        </div>
+                        {searchProduct && (
+                            <div className="mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1">
+                                {products.filter(p => p.name.toLowerCase().includes(searchProduct.toLowerCase())).map(product => (
+                                    <button
+                                        key={product.id}
+                                        onClick={() => handleProductSelect(product.id)}
+                                        className={`text-left p-3 rounded-xl border transition-all ${selectedProductId === product.id ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}`}
+                                    >
+                                        <div className="font-bold text-slate-900">{product.name}</div>
+                                        <div className="flex justify-between mt-1 text-xs text-slate-500">
+                                            <span>{product.weight_grams}g • {product.print_time_mins}m</span>
+                                            <span className="font-bold text-indigo-600">${product.base_price?.toLocaleString('es-CL')}</span>
+                                        </div>
+                                    </button>
+                                ))}
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
-                                    <label className="block text-[10px] font-black text-indigo-600 uppercase mb-2">Mult. Operativo</label>
-                                    <input
-                                        type="number" step="0.1"
-                                        value={config.operationalMultiplier}
-                                        onChange={e => setConfig({ ...config, operationalMultiplier: Number(e.target.value) })}
-                                        className="w-full p-2 bg-white border border-indigo-200 rounded-xl font-black text-indigo-700 text-center text-xl"
-                                    />
+                        )}
+                    </div>
+                )
+            }
+
+            {
+                showMgmt && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-4">
+                            <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                                <Zap size={20} className="text-indigo-500" />
+                                Precios de Energía y Márgenes
+                            </h2>
+                            <div className="grid grid-cols-1 gap-4">
+                                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Costo Energía ($ por kWh)</label>
+                                    <div className="flex items-center gap-3">
+                                        <Zap size={20} className="text-yellow-500" />
+                                        <input
+                                            type="number"
+                                            value={config.electricityCost}
+                                            onChange={e => setConfig({ ...config, electricityCost: Number(e.target.value) })}
+                                            className="w-full p-2 bg-white border border-slate-200 rounded-lg text-lg font-bold text-slate-700"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                                    <label className="block text-[10px] font-black text-emerald-600 uppercase mb-2">Mult. Venta Final</label>
-                                    <input
-                                        type="number" step="0.1"
-                                        value={config.salesMultiplier}
-                                        onChange={e => setConfig({ ...config, salesMultiplier: Number(e.target.value) })}
-                                        className="w-full p-2 bg-white border border-emerald-200 rounded-xl font-black text-emerald-700 text-center text-xl"
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
+                                        <label className="block text-[10px] font-black text-indigo-600 uppercase mb-2">Mult. Operativo</label>
+                                        <input
+                                            type="number" step="0.1"
+                                            value={config.operationalMultiplier}
+                                            onChange={e => setConfig({ ...config, operationalMultiplier: Number(e.target.value) })}
+                                            className="w-full p-2 bg-white border border-indigo-200 rounded-xl font-black text-indigo-700 text-center text-xl"
+                                        />
+                                    </div>
+                                    <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                                        <label className="block text-[10px] font-black text-emerald-600 uppercase mb-2">Mult. Venta Final</label>
+                                        <input
+                                            type="number" step="0.1"
+                                            value={config.salesMultiplier}
+                                            onChange={e => setConfig({ ...config, salesMultiplier: Number(e.target.value) })}
+                                            className="w-full p-2 bg-white border border-emerald-200 rounded-xl font-black text-emerald-700 text-center text-xl"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
@@ -404,7 +520,7 @@ const QuotationPage = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 };
 
