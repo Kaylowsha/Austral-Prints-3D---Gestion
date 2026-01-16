@@ -403,11 +403,91 @@ export default function FinancePage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Comparativa Sugerido vs Real */}
-                <Card className="shadow-sm border-slate-200">
+                <Card className="shadow-sm border-slate-200 lg:col-span-1">
+                    <CardHeader>
+                        <CardTitle className="text-base font-bold">Rendimiento Comercial</CardTitle>
+                        <CardDescription>Análisis de Brechas</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {/* 3 Key Values */}
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Costo</p>
+                                <p className="text-sm font-bold text-slate-700">${(stats.expenses - (stats.inversions || 0) - (stats.withdrawals || 0)).toLocaleString('es-CL', { notation: "compact" })}</p>
+                            </div>
+                            <div className="space-y-1 border-x border-slate-100">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Sugerido</p>
+                                <p className="text-sm font-bold text-indigo-600">${stats.suggested_income.toLocaleString('es-CL', { notation: "compact" })}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase">Cobrado</p>
+                                <p className="text-sm font-black text-green-600">${stats.income.toLocaleString('es-CL', { notation: "compact" })}</p>
+                            </div>
+                        </div>
+
+                        {/* Gaps Visualization */}
+                        <div className="space-y-4 pt-2">
+                            {/* Gap: Costo vs Cobrado (Real Margin) */}
+                            <div>
+                                <div className="flex justify-between items-end mb-1">
+                                    <span className="text-xs font-medium text-slate-500">Margen Real (Cobrado vs Costo)</span>
+                                    <span className={`text-xs font-bold ${stats.income > (stats.expenses - stats.inversions - stats.withdrawals) ? 'text-green-600' : 'text-rose-500'}`}>
+                                        {((stats.income - (stats.expenses - stats.inversions - stats.withdrawals)) / Math.max(1, stats.income) * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-green-500 rounded-full"
+                                        style={{ width: `${Math.min(100, Math.max(0, ((stats.income - (stats.expenses - stats.inversions - stats.withdrawals)) / Math.max(1, stats.income) * 100)))}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Gap: Sugerido vs Cobrado (Discount/Overprice) */}
+                            <div>
+                                <div className="flex justify-between items-end mb-1">
+                                    <span className="text-xs font-medium text-slate-500">Efectividad (Cobrado vs Sugerido)</span>
+                                    <span className={`text-xs font-bold ${stats.income >= stats.suggested_income ? 'text-indigo-600' : 'text-amber-500'}`}>
+                                        {((stats.income - stats.suggested_income) / Math.max(1, stats.suggested_income) * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                                    {/* Center point logic for gaps */}
+                                    <div className="w-1/2 h-full border-r border-white bg-slate-100 flex justify-end">
+                                        {stats.income < stats.suggested_income && (
+                                            <div className="h-full bg-amber-400" style={{ width: `${Math.min(100, (1 - (stats.income / stats.suggested_income)) * 100)}%` }} />
+                                        )}
+                                    </div>
+                                    <div className="w-1/2 h-full bg-slate-100">
+                                        {stats.income > stats.suggested_income && (
+                                            <div className="h-full bg-indigo-500" style={{ width: `${Math.min(100, ((stats.income / stats.suggested_income) - 1) * 100)}%` }} />
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex justify-between text-[9px] text-slate-400 mt-1 uppercase font-bold">
+                                    <span>Descuento</span>
+                                    <span>Sobreprecio</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-500">Gap Monetario:</span>
+                                <span className={`font-bold ${stats.income >= stats.suggested_income ? 'text-indigo-600' : 'text-rose-500'}`}>
+                                    {stats.income >= stats.suggested_income ? '+' : ''}${(stats.income - stats.suggested_income).toLocaleString('es-CL')}
+                                </span>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Gráfico Diario */}
+                <Card className="shadow-sm border-slate-200 lg:col-span-1">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0">
                         <div>
-                            <CardTitle className="text-base font-bold">Rendimiento Comercial</CardTitle>
-                            <CardDescription>Sugerido Técnico vs Cobrado Real</CardDescription>
+                            <CardTitle className="text-base font-bold">Tendencia</CardTitle>
+                            <CardDescription>Sugerido vs Real</CardDescription>
                         </div>
                         <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
                             <BarChart3 size={20} />
