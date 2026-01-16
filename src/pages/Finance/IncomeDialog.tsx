@@ -84,7 +84,7 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
                     price: Number(formData.price),
                     cost: formData.mode === 'producto' ? estimatedCost * Number(formData.quantity || 1) : 0,
                     quantity: Number(formData.quantity || 1),
-                    status: 'terminado', // Immediate income
+                    status: 'entregado', // Immediate income (money in hand)
                     created_at: new Date().toISOString(),
                     date: formData.date
                 }

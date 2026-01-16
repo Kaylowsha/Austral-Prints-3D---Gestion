@@ -58,8 +58,8 @@ export default function Dashboard() {
         // 3. Totals for cards (Filter by status)
         const { data: allOrders } = await supabase.from('orders').select('price, cost, status, product_id, quantity').gt('price', 0)
 
-        const realizedOrders = allOrders?.filter(o => ['terminado', 'entregado'].includes(o.status)) || []
-        const pendingOrders = allOrders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
+        const realizedOrders = allOrders?.filter(o => ['entregado'].includes(o.status)) || []
+        const pendingOrders = allOrders?.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status)) || []
 
         const realTotalIncome = realizedOrders
             .filter(o => o.product_id || (o as any).description !== 'Inyección de Capital')

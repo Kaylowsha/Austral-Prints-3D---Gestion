@@ -89,8 +89,9 @@ export default function FinancePage() {
         const { data: expenses } = await expensesQuery
 
         // Separate Operational from Capital
-        const realized_orders = orders?.filter(o => ['terminado', 'entregado'].includes(o.status)) || []
-        const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
+        // Cambio Solicitado: Solo 'entregado' cuenta como Ingreso Real. 'terminado' (Listo) pasa a Flotante.
+        const realized_orders = orders?.filter(o => ['entregado'].includes(o.status)) || []
+        const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status)) || []
 
         // Realized Income: Products + Manual Sales (Anything that is NOT Capital Injection)
         const op_income = realized_orders
