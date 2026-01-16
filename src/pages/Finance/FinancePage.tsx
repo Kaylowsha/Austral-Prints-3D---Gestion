@@ -185,7 +185,8 @@ export default function FinancePage() {
                 displayDate: new Date(date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
                 ingresos: dayOpIncome,
                 sugerido: dayOpSuggested,
-                gastos: dayOpExpense + dayProdCost,
+                costo_directo: dayProdCost, // New field for graph
+                gastos: dayOpExpense, // Ops expenses only
                 balance: runningBalance,
                 net: dayNet
             }
@@ -412,66 +413,56 @@ export default function FinancePage() {
                         <CardTitle className="text-base font-bold">Rendimiento Comercial</CardTitle>
                         <CardDescription>Análisis de Brechas</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* 3 Key Values */}
-                        <div className="grid grid-cols-3 gap-2 text-center">
-                            <div className="space-y-1">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Costo Directo</p>
-                                <p className="text-sm font-bold text-slate-700">${stats.production_cost.toLocaleString('es-CL', { notation: "compact" })}</p>
-                            </div>
-                            <div className="space-y-1 border-x border-slate-100">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Sugerido</p>
-                                <p className="text-sm font-bold text-indigo-600">${stats.suggested_income.toLocaleString('es-CL', { notation: "compact" })}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase">Cobrado</p>
-                                <p className="text-sm font-black text-green-600">${stats.income.toLocaleString('es-CL', { notation: "compact" })}</p>
-                            </div>
-                        </div>
+                    <CardContent className="h-[300px] w-full min-h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={dailyData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis
+                                    dataKey="displayDate"
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                />
+                                <YAxis
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                    tickFormatter={(val) => `$${val.toLocaleString('es-CL', { notation: "compact" })}`}
+                                />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                    formatter={(value: any) => [`$${Number(value).toLocaleString('es-CL')}`, '']}
+                                    labelStyle={{ color: '#64748b', marginBottom: '4px', fontSize: '12px' }}
+                                />
+                                <Legend verticalAlign="top" height={36} iconType="circle" />
 
-                        {/* Gaps Visualization */}
-                        <div className="space-y-4 pt-2">
-                            {/* Gap: Costo vs Sugerido (Margen Teórico) */}
-                            <div>
-                                <div className="flex justify-between items-end mb-1">
-                                    <span className="text-xs font-medium text-slate-500">Margen Teórico (Sugerido vs Costo)</span>
-                                    <span className="text-xs font-bold text-indigo-600">
-                                        {((stats.suggested_income - stats.production_cost) / Math.max(1, stats.suggested_income) * 100).toFixed(1)}%
-                                    </span>
-                                </div>
-                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-indigo-500 rounded-full"
-                                        style={{ width: `${Math.min(100, Math.max(0, ((stats.suggested_income - stats.production_cost) / Math.max(1, stats.suggested_income) * 100)))}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Gap: Costo vs Cobrado (Margen Real) */}
-                            <div>
-                                <div className="flex justify-between items-end mb-1">
-                                    <span className="text-xs font-medium text-slate-500">Margen Real (Cobrado vs Costo)</span>
-                                    <span className={`text-xs font-bold ${stats.income > stats.production_cost ? 'text-green-600' : 'text-rose-500'}`}>
-                                        {((stats.income - stats.production_cost) / Math.max(1, stats.income) * 100).toFixed(1)}%
-                                    </span>
-                                </div>
-                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-green-500 rounded-full"
-                                        style={{ width: `${Math.min(100, Math.max(0, ((stats.income - stats.production_cost) / Math.max(1, stats.income) * 100)))}%` }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-slate-100">
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-500">Diferencia (Real vs Teórico):</span>
-                                <span className={`font-bold ${stats.income >= stats.suggested_income ? 'text-green-600' : 'text-amber-500'}`}>
-                                    {stats.income >= stats.suggested_income ? '+' : ''}${(stats.income - stats.suggested_income).toLocaleString('es-CL')}
-                                </span>
-                            </div>
-                        </div>
+                                <Line
+                                    type="monotone"
+                                    dataKey="sugerido"
+                                    name="Sugerido"
+                                    stroke="#6366f1" // Indigo
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="ingresos"
+                                    name="Cobrado"
+                                    stroke="#10b981" // Emerald
+                                    strokeWidth={3}
+                                    dot={{ r: 3, strokeWidth: 0, fill: '#10b981' }}
+                                />
+                                <Line
+                                    type="monotone"
+                                    dataKey="costo_directo"
+                                    name="Costo Directo"
+                                    stroke="#ec4899" // Pink/Rose
+                                    strokeWidth={2}
+                                    strokeDasharray="4 4"
+                                    dot={false}
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
                     </CardContent>
                 </Card>
 
