@@ -431,7 +431,23 @@ export default function FinancePage() {
 
                         {/* Gaps Visualization */}
                         <div className="space-y-4 pt-2">
-                            {/* Gap: Costo vs Cobrado (Real Margin) */}
+                            {/* Gap: Costo vs Sugerido (Margen Teórico) */}
+                            <div>
+                                <div className="flex justify-between items-end mb-1">
+                                    <span className="text-xs font-medium text-slate-500">Margen Teórico (Sugerido vs Costo)</span>
+                                    <span className="text-xs font-bold text-indigo-600">
+                                        {((stats.suggested_income - stats.production_cost) / Math.max(1, stats.suggested_income) * 100).toFixed(1)}%
+                                    </span>
+                                </div>
+                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-indigo-500 rounded-full"
+                                        style={{ width: `${Math.min(100, Math.max(0, ((stats.suggested_income - stats.production_cost) / Math.max(1, stats.suggested_income) * 100)))}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Gap: Costo vs Cobrado (Margen Real) */}
                             <div>
                                 <div className="flex justify-between items-end mb-1">
                                     <span className="text-xs font-medium text-slate-500">Margen Real (Cobrado vs Costo)</span>
@@ -446,39 +462,12 @@ export default function FinancePage() {
                                     />
                                 </div>
                             </div>
-
-                            {/* Gap: Sugerido vs Cobrado (Discount/Overprice) */}
-                            <div>
-                                <div className="flex justify-between items-end mb-1">
-                                    <span className="text-xs font-medium text-slate-500">Efectividad (Cobrado vs Sugerido)</span>
-                                    <span className={`text-xs font-bold ${stats.income >= stats.suggested_income ? 'text-indigo-600' : 'text-amber-500'}`}>
-                                        {((stats.income - stats.suggested_income) / Math.max(1, stats.suggested_income) * 100).toFixed(1)}%
-                                    </span>
-                                </div>
-                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                                    {/* Center point logic for gaps */}
-                                    <div className="w-1/2 h-full border-r border-white bg-slate-100 flex justify-end">
-                                        {stats.income < stats.suggested_income && (
-                                            <div className="h-full bg-amber-400" style={{ width: `${Math.min(100, (1 - (stats.income / stats.suggested_income)) * 100)}%` }} />
-                                        )}
-                                    </div>
-                                    <div className="w-1/2 h-full bg-slate-100">
-                                        {stats.income > stats.suggested_income && (
-                                            <div className="h-full bg-indigo-500" style={{ width: `${Math.min(100, ((stats.income / stats.suggested_income) - 1) * 100)}%` }} />
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex justify-between text-[9px] text-slate-400 mt-1 uppercase font-bold">
-                                    <span>Descuento</span>
-                                    <span>Sobreprecio</span>
-                                </div>
-                            </div>
                         </div>
 
                         <div className="pt-2 border-t border-slate-100">
                             <div className="flex items-center justify-between text-xs">
-                                <span className="text-slate-500">Gap Monetario:</span>
-                                <span className={`font-bold ${stats.income >= stats.suggested_income ? 'text-indigo-600' : 'text-rose-500'}`}>
+                                <span className="text-slate-500">Diferencia (Real vs Teórico):</span>
+                                <span className={`font-bold ${stats.income >= stats.suggested_income ? 'text-green-600' : 'text-amber-500'}`}>
                                     {stats.income >= stats.suggested_income ? '+' : ''}${(stats.income - stats.suggested_income).toLocaleString('es-CL')}
                                 </span>
                             </div>
