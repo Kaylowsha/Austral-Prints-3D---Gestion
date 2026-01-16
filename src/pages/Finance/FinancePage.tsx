@@ -46,7 +46,8 @@ export default function FinancePage() {
         withdrawals: 0,
         inversions: 0,
         floating: 0,
-        suggested_income: 0
+        suggested_income: 0,
+        production_cost: 0
     })
     const [timeframe, setTimeframe] = useState<'7d' | '30d' | 'month' | 'all'>('30d')
     const [categoryData, setCategoryData] = useState<any[]>([])
@@ -107,7 +108,9 @@ export default function FinancePage() {
             .reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
 
         const op_expenses = expenses?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
-        const prod_cost = realized_orders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
+
+        // Costo Real de Producción (Material + Energia de lo vendido)
+        const realTotalCost = realized_orders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
         // Injections: Only explicit Capital Injections
         const injections = realized_orders
@@ -117,13 +120,13 @@ export default function FinancePage() {
         const inversions = expenses?.filter(e => e.category === 'inversion').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
         const withdrawals = expenses?.filter(e => e.category === 'retiro').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
-        const profit = op_income - op_expenses - prod_cost
+        const profit = op_income - op_expenses - realTotalCost
         const margin = op_income > 0 ? (profit / op_income) * 100 : 0
         const balance = profit + injections - inversions - withdrawals
 
         setStats({
             income: op_income,
-            expenses: op_expenses + prod_cost,
+            expenses: op_expenses + realTotalCost,
             profit,
             margin,
             balance,
@@ -131,7 +134,8 @@ export default function FinancePage() {
             withdrawals,
             inversions,
             floating,
-            suggested_income
+            suggested_income,
+            production_cost: realTotalCost
         })
 
         // 2. Format Category Data (Operational only)
