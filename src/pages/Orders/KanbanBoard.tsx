@@ -8,6 +8,7 @@ import OrderDialog from './OrderDialog'
 import EditOrderDialog from './EditOrderDialog'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { XCircle } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Define columns
 const COLUMNS = [
@@ -162,8 +163,8 @@ export default function KanbanBoard() {
                 <OrderDialog onSuccess={fetchOrders} />
             </header>
 
-            {/* Kanban Grid */}
-            <div className="flex-1 overflow-x-auto text-slate-900">
+            {/* Desktop Kanban Grid */}
+            <div className="hidden md:flex flex-1 overflow-x-auto text-slate-900">
                 <div className="flex gap-4 min-w-[1000px] h-full pb-4">
                     {COLUMNS.map(col => (
                         <div key={col.id} className="flex-1 min-w-[250px] bg-slate-100/50 rounded-xl p-3 border border-slate-200 flex flex-col max-h-[70vh]">
@@ -175,85 +176,144 @@ export default function KanbanBoard() {
                             </div>
 
                             <div className="space-y-3 overflow-y-auto flex-1 pr-1 custom-scrollbar">
-                                {orders.filter(o => o.status === col.id).map(order => (
-                                    <Card key={order.id} className={`hover:shadow-md transition-all shadow-sm bg-white border-0 ${isUpdating[order.id] ? 'opacity-50 cursor-wait' : 'cursor-default'}`}>
-                                        <CardContent className="p-3 space-y-2">
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex flex-col">
-                                                    <span className="font-black text-[10px] text-slate-800 uppercase leading-tight mb-1">
-                                                        {order.custom_client_name || order.clients?.full_name || 'Sin Cliente'}
-                                                    </span>
-                                                    <p className="font-semibold text-xs text-slate-500 line-clamp-2">
-                                                        {order.description || order.products?.name || 'Sin descripción'}
-                                                    </p>
-                                                </div>
-                                                {(order.quantity > 1) && (
-                                                    <span className="bg-indigo-50 text-indigo-600 text-[9px] font-black px-1.5 py-0.5 rounded-md border border-indigo-100">
-                                                        x{order.quantity}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <div className="flex justify-between items-end text-xs text-slate-400">
-                                                <div className="flex flex-col">
-                                                    <span>{new Date(order.created_at).toLocaleDateString()}</span>
-                                                    {order.deadline && (
-                                                        <span className="text-red-500 font-medium">Entrega: {new Date(order.deadline).toLocaleDateString()}</span>
-                                                    )}
-                                                </div>
-                                                <span className="font-mono text-slate-600 font-bold">${((order.price || 0) * (order.quantity || 1)).toLocaleString() || 0}</span>
-                                            </div>
-
-                                            {/* Action Buttons */}
-                                            <div className="pt-2 flex justify-between items-center gap-1">
-                                                <ConfirmDialog
-                                                    title="¿Anular pedido?"
-                                                    description="El pedido se marcará como cancelado y no aparecerá en el tablero."
-                                                    onConfirm={() => updateStatus(order.id, 'cancelado')}
-                                                    trigger={
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            disabled={isUpdating[order.id]}
-                                                            className="h-6 text-[10px] px-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50"
-                                                        >
-                                                            <XCircle size={12} className="mr-1" /> Anular
-                                                        </Button>
-                                                    }
-                                                />
-
-                                                <EditOrderDialog order={order} onSuccess={fetchOrders} />
-
-                                                {col.id !== 'entregado' && (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="secondary"
-                                                        disabled={isUpdating[order.id]}
-                                                        className="h-6 text-[10px] px-2"
-                                                        onClick={() => {
-                                                            const nextIndex = COLUMNS.findIndex(c => c.id === col.id) + 1
-                                                            if (nextIndex < COLUMNS.length) {
-                                                                updateStatus(order.id, COLUMNS[nextIndex].id)
-                                                            }
-                                                        }}
-                                                    >
-                                                        {isUpdating[order.id] ? <Loader2 size={10} className="animate-spin mr-1" /> : 'Avanzar'}
-                                                        <ArrowRight size={10} className="ml-1" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                                {orders.filter(o => o.status === col.id).length === 0 && (
-                                    <div className="text-center py-10 text-slate-300 text-xs italic">
-                                        Vacío
-                                    </div>
-                                )}
+                                <OrdersList
+                                    orders={orders.filter(o => o.status === col.id)}
+                                    isUpdating={isUpdating}
+                                    updateStatus={updateStatus}
+                                    handleDeduct={deductInventory} // Passed as prop if needed, though ConfirmDialog is inline
+                                    colId={col.id}
+                                    fetchOrders={fetchOrders}
+                                />
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
+
+            {/* Mobile Tabs View */}
+            <div className="md:hidden flex-1 h-full min-h-0 flex flex-col">
+                <Tabs defaultValue="pendiente" className="flex-1 flex flex-col min-h-0">
+                    <TabsList className="grid w-full grid-cols-4 mb-2">
+                        {COLUMNS.map(col => (
+                            <TabsTrigger key={col.id} value={col.id} className="text-[10px] px-0.5 py-2">
+                                {col.label.replace('Imprimiendo', 'Print').replace('Entregado', 'Fin')}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+
+                    {COLUMNS.map(col => (
+                        <TabsContent key={col.id} value={col.id} className="flex-1 overflow-y-auto min-h-0 pb-20">
+                            <div className={`mb-3 px-3 py-2 rounded-lg font-semibold text-sm ${col.color} flex justify-between items-center sticky top-0 z-10 shadow-sm mx-1`}>
+                                {col.label}
+                                <span className="bg-white/50 px-2 rounded-full text-xs">
+                                    {orders.filter(o => o.status === col.id).length}
+                                </span>
+                            </div>
+                            <div className="space-y-3 px-1">
+                                <OrdersList
+                                    orders={orders.filter(o => o.status === col.id)}
+                                    isUpdating={isUpdating}
+                                    updateStatus={updateStatus}
+                                    handleDeduct={deductInventory}
+                                    colId={col.id}
+                                    fetchOrders={fetchOrders}
+                                />
+                            </div>
+                        </TabsContent>
+                    ))}
+                </Tabs>
+            </div>
         </div>
+    )
+}
+
+// Extracted Component to avoid duplication
+function OrdersList({ orders, isUpdating, updateStatus, colId, fetchOrders }: any) {
+    if (orders.length === 0) {
+        return (
+            <div className="text-center py-10 text-slate-300 text-xs italic">
+                Vacío
+            </div>
+        )
+    }
+
+    return (
+        <>
+            {orders.map((order: any) => (
+                <Card key={order.id} className={`hover:shadow-md transition-all shadow-sm bg-white border-0 ${isUpdating[order.id] ? 'opacity-50 cursor-wait' : 'cursor-default'}`}>
+                    <CardContent className="p-3 space-y-2">
+                        <div className="flex justify-between items-start">
+                            <div className="flex flex-col">
+                                <span className="font-black text-[10px] text-slate-800 uppercase leading-tight mb-1">
+                                    {order.custom_client_name || order.clients?.full_name || 'Sin Cliente'}
+                                </span>
+                                <p className="font-semibold text-xs text-slate-500 line-clamp-2">
+                                    {order.description || order.products?.name || 'Sin descripción'}
+                                </p>
+                            </div>
+                            {(order.quantity > 1) && (
+                                <span className="bg-indigo-50 text-indigo-600 text-[9px] font-black px-1.5 py-0.5 rounded-md border border-indigo-100">
+                                    x{order.quantity}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex justify-between items-end text-xs text-slate-400">
+                            <div className="flex flex-col">
+                                <span>{new Date(order.created_at).toLocaleDateString()}</span>
+                                {order.deadline && (
+                                    <span className="text-red-500 font-medium">Entrega: {new Date(order.deadline).toLocaleDateString()}</span>
+                                )}
+                            </div>
+                            <span className="font-mono text-slate-600 font-bold">${((order.price || 0) * (order.quantity || 1)).toLocaleString() || 0}</span>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="pt-2 flex justify-between items-center gap-1">
+                            <ConfirmDialog
+                                title="¿Anular pedido?"
+                                description="El pedido se marcará como cancelado y no aparecerá en el tablero."
+                                onConfirm={() => updateStatus(order.id, 'cancelado')}
+                                trigger={
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled={isUpdating[order.id]}
+                                        className="h-6 text-[10px] px-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50"
+                                    >
+                                        <XCircle size={12} className="mr-1" /> Anular
+                                    </Button>
+                                }
+                            />
+
+                            <EditOrderDialog order={order} onSuccess={fetchOrders} />
+
+                            {colId !== 'entregado' && (
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    disabled={isUpdating[order.id]}
+                                    className="h-6 text-[10px] px-2"
+                                    onClick={() => {
+                                        const COLUMNS = [
+                                            { id: 'pendiente' },
+                                            { id: 'en_proceso' },
+                                            { id: 'terminado' },
+                                            { id: 'entregado' }
+                                        ]
+                                        const nextIndex = COLUMNS.findIndex(c => c.id === colId) + 1
+                                        if (nextIndex < COLUMNS.length) {
+                                            updateStatus(order.id, COLUMNS[nextIndex].id)
+                                        }
+                                    }}
+                                >
+                                    {isUpdating[order.id] ? <Loader2 size={10} className="animate-spin mr-1" /> : 'Avanzar'}
+                                    <ArrowRight size={10} className="ml-1" />
+                                </Button>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+        </>
     )
 }
