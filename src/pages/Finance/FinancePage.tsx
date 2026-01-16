@@ -192,20 +192,13 @@ export default function FinancePage() {
             return {
                 date,
                 displayDate: new Date(date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
-                ingresos: accIngresos, // Cumulative
-                sugerido: accSugerido, // Cumulative
-                costo_directo: accCosto, // Cumulative
-                gastos: dayOpExpense, // Ops expenses stay daily for balance calculation/context? Or should they be cumulative? Leaving daily for now as used in other charts maybe? 
-                // Actually 'gastos' key is used in AreaChart balance history. Usually balance history shows accumulated balance (which runningBalance is).
-                // But the AreaChart might use 'ingresos' vs 'gastos' daily bars? Let's check usage.
-                // Checking previous code: setDailyData(historyData) is used.
-                // The BarChart uses 'ingresos' and 'gastos' bars. If I make 'ingresos' cumulative, the daily bars will look wrong (increasing monotonously).
-                // Wait! The user wants the COMPARISON graph to be cumulative.
-                // The Main Dashboard charts (BarChart) usually show daily income/expense.
-                // If I change 'ingresos' to be cumulative here, it will break the daily BarChart.
-                // I should add NEW keys for cumulative values: 'ingresos_acc', 'sugerido_acc', 'costo_acc'.
-                // And update the LineChart to use these new keys.
-                // Let's revert and do that properly.
+                ingresos: dayOpIncome, // Keep Daily for other charts
+                ingresos_acc: accIngresos, // New Cumulative Key
+                sugerido: dayOpSuggested, // Keep Daily
+                sugerido_acc: accSugerido, // New Cumulative Key
+                costo_directo: dayProdCost, // Keep Daily
+                costo_acc: accCosto, // New Cumulative Key
+                gastos: dayOpExpense,
                 balance: runningBalance,
                 net: dayNet
             }
@@ -432,56 +425,58 @@ export default function FinancePage() {
                         <CardTitle className="text-base font-bold">Rendimiento Comercial</CardTitle>
                         <CardDescription>Análisis de Brechas</CardDescription>
                     </CardHeader>
-                    <CardContent className="h-[300px] w-full min-h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={dailyData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis
-                                    dataKey="displayDate"
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
-                                />
-                                <YAxis
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
-                                    tickFormatter={(val) => `$${val.toLocaleString('es-CL', { notation: "compact" })}`}
-                                />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                    formatter={(value: any) => [`$${Number(value).toLocaleString('es-CL')}`, '']}
-                                    labelStyle={{ color: '#64748b', marginBottom: '4px', fontSize: '12px' }}
-                                />
-                                <Legend verticalAlign="top" height={36} iconType="circle" />
+                    <CardContent className="p-0">
+                        <div style={{ width: '100%', height: 300, minHeight: 300 }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={dailyData}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis
+                                        dataKey="displayDate"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                        tickFormatter={(val) => `$${val.toLocaleString('es-CL', { notation: "compact" })}`}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                        formatter={(value: any) => [`$${Number(value).toLocaleString('es-CL')}`, '']}
+                                        labelStyle={{ color: '#64748b', marginBottom: '4px', fontSize: '12px' }}
+                                    />
+                                    <Legend verticalAlign="top" height={36} iconType="circle" />
 
-                                <Line
-                                    type="monotone"
-                                    dataKey="sugerido_acc"
-                                    name="Sugerido (Acum)"
-                                    stroke="#6366f1" // Indigo
-                                    strokeWidth={2}
-                                    dot={false}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="ingresos_acc"
-                                    name="Cobrado (Acum)"
-                                    stroke="#10b981" // Emerald
-                                    strokeWidth={3}
-                                    dot={{ r: 3, strokeWidth: 0, fill: '#10b981' }}
-                                />
-                                <Line
-                                    type="monotone"
-                                    dataKey="costo_acc"
-                                    name="Costo Directo (Acum)"
-                                    stroke="#ec4899" // Pink/Rose
-                                    strokeWidth={2}
-                                    strokeDasharray="4 4"
-                                    dot={false}
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
+                                    <Line
+                                        type="monotone"
+                                        dataKey="sugerido_acc"
+                                        name="Sugerido (Acum)"
+                                        stroke="#6366f1" // Indigo
+                                        strokeWidth={2}
+                                        dot={false}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="ingresos_acc"
+                                        name="Cobrado (Acum)"
+                                        stroke="#10b981" // Emerald
+                                        strokeWidth={3}
+                                        dot={{ r: 3, strokeWidth: 0, fill: '#10b981' }}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="costo_acc"
+                                        name="Costo Directo (Acum)"
+                                        stroke="#ec4899" // Pink/Rose
+                                        strokeWidth={2}
+                                        strokeDasharray="4 4"
+                                        dot={false}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
                     </CardContent>
                 </Card>
 
