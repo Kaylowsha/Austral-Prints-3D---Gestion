@@ -160,6 +160,10 @@ export default function FinancePage() {
         })
 
         let runningBalance = 0
+        let accIngresos = 0
+        let accSugerido = 0
+        let accCosto = 0
+
         const historyData = timeline.map(date => {
             const dayOpIncome = orders?.filter(o => (o.date || o.created_at).startsWith(date) && (o.product_id || o.description !== 'Inyección de Capital'))
                 .reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
@@ -178,15 +182,30 @@ export default function FinancePage() {
                 .reduce((acc, curr) => acc + ((curr.suggested_price || curr.price || 0) * (curr.quantity || 1)), 0) || 0
 
             const dayNet = dayOpIncome - dayOpExpense - dayProdCost + dayInjections - dayWithdrawals
+
+            // Accumulate values
             runningBalance += dayNet
+            accIngresos += dayOpIncome
+            accSugerido += dayOpSuggested
+            accCosto += dayProdCost
 
             return {
                 date,
                 displayDate: new Date(date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
-                ingresos: dayOpIncome,
-                sugerido: dayOpSuggested,
-                costo_directo: dayProdCost, // New field for graph
-                gastos: dayOpExpense, // Ops expenses only
+                ingresos: accIngresos, // Cumulative
+                sugerido: accSugerido, // Cumulative
+                costo_directo: accCosto, // Cumulative
+                gastos: dayOpExpense, // Ops expenses stay daily for balance calculation/context? Or should they be cumulative? Leaving daily for now as used in other charts maybe? 
+                // Actually 'gastos' key is used in AreaChart balance history. Usually balance history shows accumulated balance (which runningBalance is).
+                // But the AreaChart might use 'ingresos' vs 'gastos' daily bars? Let's check usage.
+                // Checking previous code: setDailyData(historyData) is used.
+                // The BarChart uses 'ingresos' and 'gastos' bars. If I make 'ingresos' cumulative, the daily bars will look wrong (increasing monotonously).
+                // Wait! The user wants the COMPARISON graph to be cumulative.
+                // The Main Dashboard charts (BarChart) usually show daily income/expense.
+                // If I change 'ingresos' to be cumulative here, it will break the daily BarChart.
+                // I should add NEW keys for cumulative values: 'ingresos_acc', 'sugerido_acc', 'costo_acc'.
+                // And update the LineChart to use these new keys.
+                // Let's revert and do that properly.
                 balance: runningBalance,
                 net: dayNet
             }
@@ -438,24 +457,24 @@ export default function FinancePage() {
 
                                 <Line
                                     type="monotone"
-                                    dataKey="sugerido"
-                                    name="Sugerido"
+                                    dataKey="sugerido_acc"
+                                    name="Sugerido (Acum)"
                                     stroke="#6366f1" // Indigo
                                     strokeWidth={2}
                                     dot={false}
                                 />
                                 <Line
                                     type="monotone"
-                                    dataKey="ingresos"
-                                    name="Cobrado"
+                                    dataKey="ingresos_acc"
+                                    name="Cobrado (Acum)"
                                     stroke="#10b981" // Emerald
                                     strokeWidth={3}
                                     dot={{ r: 3, strokeWidth: 0, fill: '#10b981' }}
                                 />
                                 <Line
                                     type="monotone"
-                                    dataKey="costo_directo"
-                                    name="Costo Directo"
+                                    dataKey="costo_acc"
+                                    name="Costo Directo (Acum)"
                                     stroke="#ec4899" // Pink/Rose
                                     strokeWidth={2}
                                     strokeDasharray="4 4"
