@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowRight } from 'lucide-react'
+import { Loader2, ArrowRight, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import OrderDialog from './OrderDialog'
 import EditOrderDialog from './EditOrderDialog'
@@ -288,27 +288,52 @@ function OrdersList({ orders, isUpdating, updateStatus, colId, fetchOrders }: an
                             <EditOrderDialog order={order} onSuccess={fetchOrders} />
 
                             {colId !== 'entregado' && (
-                                <Button
-                                    size="sm"
-                                    variant="secondary"
-                                    disabled={isUpdating[order.id]}
-                                    className="h-6 text-[10px] px-2"
-                                    onClick={() => {
-                                        const COLUMNS = [
-                                            { id: 'pendiente' },
-                                            { id: 'en_proceso' },
-                                            { id: 'terminado' },
-                                            { id: 'entregado' }
-                                        ]
-                                        const nextIndex = COLUMNS.findIndex(c => c.id === colId) + 1
-                                        if (nextIndex < COLUMNS.length) {
-                                            updateStatus(order.id, COLUMNS[nextIndex].id)
-                                        }
-                                    }}
-                                >
-                                    {isUpdating[order.id] ? <Loader2 size={10} className="animate-spin mr-1" /> : 'Avanzar'}
-                                    <ArrowRight size={10} className="ml-1" />
-                                </Button>
+                                <div className="flex gap-1">
+                                    {colId !== 'pendiente' && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            disabled={isUpdating[order.id]}
+                                            className="h-6 text-[10px] px-2 text-slate-400 hover:text-slate-600"
+                                            onClick={() => {
+                                                const COLUMNS = [
+                                                    { id: 'pendiente' },
+                                                    { id: 'en_proceso' },
+                                                    { id: 'terminado' },
+                                                    { id: 'entregado' }
+                                                ]
+                                                const prevIndex = COLUMNS.findIndex(c => c.id === colId) - 1
+                                                if (prevIndex >= 0) {
+                                                    updateStatus(order.id, COLUMNS[prevIndex].id)
+                                                }
+                                            }}
+                                        >
+                                            <ArrowLeft size={10} className="mr-1" />
+                                            {isUpdating[order.id] ? <Loader2 size={10} className="animate-spin" /> : 'Atrás'}
+                                        </Button>
+                                    )}
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        disabled={isUpdating[order.id]}
+                                        className="h-6 text-[10px] px-2"
+                                        onClick={() => {
+                                            const COLUMNS = [
+                                                { id: 'pendiente' },
+                                                { id: 'en_proceso' },
+                                                { id: 'terminado' },
+                                                { id: 'entregado' }
+                                            ]
+                                            const nextIndex = COLUMNS.findIndex(c => c.id === colId) + 1
+                                            if (nextIndex < COLUMNS.length) {
+                                                updateStatus(order.id, COLUMNS[nextIndex].id)
+                                            }
+                                        }}
+                                    >
+                                        {isUpdating[order.id] ? <Loader2 size={10} className="animate-spin mr-1" /> : 'Avanzar'}
+                                        <ArrowRight size={10} className="ml-1" />
+                                    </Button>
+                                </div>
                             )}
                         </div>
                     </CardContent>
