@@ -134,7 +134,15 @@ export default function KanbanBoard() {
             toast.success(`Pedido movido a ${colLabel}`)
 
             // 7. Inventory Deduction (Async, non-blocking for the UI move)
-            if (newStatus === 'terminado' && targetOrder) {
+            // 7. Inventory Deduction (Only if arriving at 'terminado' from a previous stage)
+            const isMovingBackwards = targetOrder &&
+                (
+                    (targetOrder.status === 'entregado' && newStatus === 'terminado') ||
+                    (targetOrder.status === 'entregado' && newStatus === 'en_proceso') ||
+                    (targetOrder.status === 'terminado' && newStatus === 'en_proceso')
+                );
+
+            if (newStatus === 'terminado' && targetOrder && !isMovingBackwards) {
                 deductInventory({ ...targetOrder, status: newStatus })
             }
 
@@ -287,31 +295,32 @@ function OrdersList({ orders, isUpdating, updateStatus, colId, fetchOrders }: an
 
                             <EditOrderDialog order={order} onSuccess={fetchOrders} />
 
-                            {colId !== 'entregado' && (
-                                <div className="flex gap-1">
-                                    {colId !== 'pendiente' && (
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            disabled={isUpdating[order.id]}
-                                            className="h-6 text-[10px] px-2 text-slate-400 hover:text-slate-600"
-                                            onClick={() => {
-                                                const COLUMNS = [
-                                                    { id: 'pendiente' },
-                                                    { id: 'en_proceso' },
-                                                    { id: 'terminado' },
-                                                    { id: 'entregado' }
-                                                ]
-                                                const prevIndex = COLUMNS.findIndex(c => c.id === colId) - 1
-                                                if (prevIndex >= 0) {
-                                                    updateStatus(order.id, COLUMNS[prevIndex].id)
-                                                }
-                                            }}
-                                        >
-                                            <ArrowLeft size={10} className="mr-1" />
-                                            {isUpdating[order.id] ? <Loader2 size={10} className="animate-spin" /> : 'Atrás'}
-                                        </Button>
-                                    )}
+                            <div className="flex gap-1">
+                                {colId !== 'pendiente' && (
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled={isUpdating[order.id]}
+                                        className="h-6 text-[10px] px-2 text-slate-400 hover:text-slate-600"
+                                        onClick={() => {
+                                            const COLUMNS = [
+                                                { id: 'pendiente' },
+                                                { id: 'en_proceso' },
+                                                { id: 'terminado' },
+                                                { id: 'entregado' }
+                                            ]
+                                            const prevIndex = COLUMNS.findIndex(c => c.id === colId) - 1
+                                            if (prevIndex >= 0) {
+                                                updateStatus(order.id, COLUMNS[prevIndex].id)
+                                            }
+                                        }}
+                                    >
+                                        <ArrowLeft size={10} className="mr-1" />
+                                        {isUpdating[order.id] ? <Loader2 size={10} className="animate-spin" /> : 'Atrás'}
+                                    </Button>
+                                )}
+
+                                {colId !== 'entregado' && (
                                     <Button
                                         size="sm"
                                         variant="secondary"
@@ -330,11 +339,12 @@ function OrdersList({ orders, isUpdating, updateStatus, colId, fetchOrders }: an
                                             }
                                         }}
                                     >
-                                        {isUpdating[order.id] ? <Loader2 size={10} className="animate-spin mr-1" /> : 'Avanzar'}
-                                        <ArrowRight size={10} className="ml-1" />
+                                        {isUpdating[order.id] ? <Loader2 size={10} className="mr-1 animate-spin" /> : null}
+                                        {!isUpdating[order.id] ? 'Avanzar' : ''}
+                                        {!isUpdating[order.id] && <ArrowRight size={10} className="ml-1" />}
                                     </Button>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
