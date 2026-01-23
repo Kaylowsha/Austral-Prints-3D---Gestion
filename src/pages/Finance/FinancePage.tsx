@@ -102,9 +102,9 @@ export default function FinancePage() {
         setInventoryValue(currentInventoryValue)
 
         // Separate Operational from Capital
-        // Unificación: 'entregado' y 'terminado' (Listo) cuentan como Ingreso Real (según etiqueta del card)
-        const realized_orders = orders?.filter(o => ['entregado', 'terminado'].includes(o.status)) || []
-        const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
+        // Separación estricta: Solo 'entregado' es Ingreso Real. 'pendiente', 'en_proceso' y 'terminado' (Listo) son Flotantes.
+        const realized_orders = orders?.filter(o => ['entregado'].includes(o.status)) || []
+        const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status)) || []
 
         // Realized Income: Products + Manual Sales (Anything that is NOT Capital Injection)
         const op_income = realized_orders
@@ -324,7 +324,7 @@ export default function FinancePage() {
                             title="Ingresos Reales"
                             value={`$${stats.income.toLocaleString('es-CL')}`}
                             icon={<ArrowUpRight className="text-green-500" />}
-                            subValue="Ventas pagadas/listas"
+                            subValue="Ventas entregadas/pagadas"
                         />
                         <MetricCard
                             title="Ingresos Flotantes"
