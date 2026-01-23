@@ -206,6 +206,7 @@ const QuotationPage = () => {
                 suggested_price: results.finalPrice,
                 cost: results.totalOperationalCost * quantity,
                 status: 'pendiente',
+                date: new Date().toISOString().split('T')[0],
                 quantity: quantity,
                 quoted_grams: project.filamentGrams,
                 quoted_hours: project.printTimeHours,

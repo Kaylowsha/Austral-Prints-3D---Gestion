@@ -96,6 +96,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     quantity: Number(formData.quantity || 1),
                     deadline: formData.deadline || null,
                     status: 'pendiente',
+                    date: new Date().toISOString().split('T')[0],
                     created_at: new Date().toISOString()
                 }
             ]).select()

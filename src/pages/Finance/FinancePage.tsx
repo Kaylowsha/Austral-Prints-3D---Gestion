@@ -85,7 +85,7 @@ export default function FinancePage() {
         let expensesQuery = supabase.from('expenses').select('*, profiles(email)')
 
         if (startDate) {
-            ordersQuery = ordersQuery.gte('date', startDate)
+            ordersQuery = ordersQuery.or(`date.gte.${startDate},created_at.gte.${startDate}`)
             expensesQuery = expensesQuery.gte('date', startDate)
         }
 
