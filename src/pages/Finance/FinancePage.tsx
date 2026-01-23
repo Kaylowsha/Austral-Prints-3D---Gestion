@@ -102,9 +102,9 @@ export default function FinancePage() {
         setInventoryValue(currentInventoryValue)
 
         // Separate Operational from Capital
-        // Cambio Solicitado: Solo 'entregado' cuenta como Ingreso Real. 'terminado' (Listo) pasa a Flotante.
-        const realized_orders = orders?.filter(o => ['entregado'].includes(o.status)) || []
-        const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status)) || []
+        // Unificación: 'entregado' y 'terminado' (Listo) cuentan como Ingreso Real (según etiqueta del card)
+        const realized_orders = orders?.filter(o => ['entregado', 'terminado'].includes(o.status)) || []
+        const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso'].includes(o.status)) || []
 
         // Realized Income: Products + Manual Sales (Anything that is NOT Capital Injection)
         const op_income = realized_orders
