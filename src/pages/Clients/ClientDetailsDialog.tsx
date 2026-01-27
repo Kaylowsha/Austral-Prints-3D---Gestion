@@ -14,8 +14,7 @@ import {
     Calendar,
     Package,
     Loader2,
-    Clock,
-    TrendingUp
+    Clock
 } from 'lucide-react'
 
 interface ClientDetailsDialogProps {
@@ -28,10 +27,10 @@ export default function ClientDetailsDialog({ open, onOpenChange, client }: Clie
     const [loading, setLoading] = useState(false)
     const [orders, setOrders] = useState<any[]>([])
     const [stats, setStats] = useState({
-        totalSpent: 0,
-        orderCount: 0,
-        avgTicket: 0,
-        pendingCount: 0
+        totalCharged: 0,
+        directCost: 0,
+        pendingPayment: 0,
+        orderCount: 0
     })
 
     useEffect(() => {
@@ -56,14 +55,17 @@ export default function ClientDetailsDialog({ open, onOpenChange, client }: Clie
 
             // Calculate Stats
             const deliveredOrders = history.filter(o => o.status === 'entregado')
-            const total = deliveredOrders.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0)
-            const pending = history.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status)).length
+            const pendingOrders = history.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status))
+
+            const charged = deliveredOrders.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0)
+            const pending = pendingOrders.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0)
+            const cost = history.filter(o => o.status !== 'cancelado').reduce((acc, curr) => acc + (curr.cost || 0), 0)
 
             setStats({
-                totalSpent: total,
-                orderCount: history.length,
-                avgTicket: deliveredOrders.length > 0 ? total / deliveredOrders.length : 0,
-                pendingCount: pending
+                totalCharged: charged,
+                directCost: cost,
+                pendingPayment: pending,
+                orderCount: history.length
             })
         } catch (error) {
             console.error('Error fetching client history:', error)
@@ -106,26 +108,27 @@ export default function ClientDetailsDialog({ open, onOpenChange, client }: Clie
                     {/* Metrics Grid */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <MetricBox
-                            label="Inversión Total"
-                            value={`$${stats.totalSpent.toLocaleString('es-CL')}`}
+                            label="Lo Cobrado"
+                            value={`$${stats.totalCharged.toLocaleString('es-CL')}`}
                             icon={<DollarSign size={14} />}
                             color="text-emerald-600"
                         />
                         <MetricBox
-                            label="Pedidos Totales"
+                            label="Costo Directo"
+                            value={`$${stats.directCost.toLocaleString('es-CL')}`}
+                            icon={<Package size={14} />}
+                            color="text-rose-600"
+                        />
+                        <MetricBox
+                            label="Pendiente de Pago"
+                            value={`$${stats.pendingPayment.toLocaleString('es-CL')}`}
+                            icon={<Clock size={14} />}
+                            color={stats.pendingPayment > 0 ? "text-amber-600" : "text-slate-400"}
+                        />
+                        <MetricBox
+                            label="Pedidos"
                             value={stats.orderCount.toString()}
                             icon={<ShoppingBag size={14} />}
-                        />
-                        <MetricBox
-                            label="Ticket Promedio"
-                            value={`$${stats.avgTicket.toLocaleString('es-CL', { maximumFractionDigits: 0 })}`}
-                            icon={<TrendingUp size={14} />}
-                        />
-                        <MetricBox
-                            label="En Curso"
-                            value={stats.pendingCount.toString()}
-                            icon={<Clock size={14} />}
-                            color={stats.pendingCount > 0 ? "text-amber-600" : "text-slate-400"}
                         />
                     </div>
 
