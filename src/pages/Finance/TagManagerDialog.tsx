@@ -41,12 +41,17 @@ export default function TagManagerDialog({ onSuccess }: TagManagerDialogProps) {
 
     const fetchUniqueTags = async () => {
         try {
+            // 1. Fetch tags from existing records
             const { data: orders } = await supabase.from('orders').select('tags')
             const { data: expenses } = await supabase.from('expenses').select('tags')
+
+            // 2. Fetch pre-defined tags from master table
+            const { data: masterTags } = await supabase.from('tags').select('name')
 
             const allTags = new Set<string>()
             orders?.forEach(o => o.tags?.forEach((t: string) => allTags.add(t)))
             expenses?.forEach(e => e.tags?.forEach((t: string) => allTags.add(t)))
+            masterTags?.forEach(t => allTags.add(t.name))
 
             setAvailableTags(Array.from(allTags).sort())
         } catch (error) {
@@ -62,12 +67,23 @@ export default function TagManagerDialog({ onSuccess }: TagManagerDialogProps) {
 
         setLoading(true)
         try {
-            const { error } = await supabase.rpc('rename_tag', {
+            // 1. Update orders and expenses via RPC
+            const { error: rpcError } = await supabase.rpc('rename_tag', {
                 old_tag: selectedTag,
                 new_tag: newTagName.trim()
             })
+            if (rpcError) throw rpcError
 
-            if (error) throw error
+            // 2. Also update the master tags table if the tag exists there
+            const { error: masterError } = await supabase
+                .from('tags')
+                .update({ name: newTagName.trim() })
+                .eq('name', selectedTag)
+
+            if (masterError) {
+                console.warn('Tag not found in master table or error updating it:', masterError)
+                // We don't throw here because the main rename succeeded
+            }
 
             toast.success(`Etiqueta "${selectedTag}" renombrada a "${newTagName}"`)
             setSelectedTag('')
