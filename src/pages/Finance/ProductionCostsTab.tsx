@@ -3,7 +3,6 @@ import {
     Zap,
     Package,
     Clock,
-    BarChart3,
     PieChart as PieChartIcon,
     Gauge
 } from 'lucide-react'
@@ -16,7 +15,6 @@ import {
     XAxis,
     YAxis,
     CartesianGrid,
-    Legend,
     AreaChart,
     Area
 } from 'recharts'
@@ -128,70 +126,109 @@ export function ProductionCostsTab({ stats, dailyData }: ProductionCostsTabProps
                     </CardContent>
                 </Card>
 
-                {/* Trend Chart */}
-                <Card className="shadow-sm border-slate-200 lg:col-span-2">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle className="text-base font-bold">Evolución de Costos Directos</CardTitle>
-                            <CardDescription>Tendencia diaria de Material vs Energía</CardDescription>
-                        </div>
-                        <div className="p-2 bg-slate-50 text-slate-400 rounded-lg">
-                            <BarChart3 size={20} />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={dailyData}>
-                                <defs>
-                                    <linearGradient id="colorMaterial" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#ec4899" stopOpacity={0.1} />
-                                        <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
-                                    </linearGradient>
-                                    <linearGradient id="colorEnergy" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1} />
-                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis
-                                    dataKey="displayDate"
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
-                                />
-                                <YAxis
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fill: '#94a3b8', fontSize: 10 }}
-                                    tickFormatter={(val) => `$${val.toLocaleString('es-CL', { notation: 'compact' })}`}
-                                />
-                                <Tooltip
-                                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                    formatter={(value: any) => [`$${value.toLocaleString('es-CL')}`, '']}
-                                />
-                                <Legend verticalAlign="top" height={36} />
-                                <Area
-                                    type="monotone"
-                                    dataKey="costo_directo" // Using existing key for material-heavy mix
-                                    name="Material (Est.)"
-                                    stroke="#ec4899"
-                                    fillOpacity={1}
-                                    fill="url(#colorMaterial)"
-                                    strokeWidth={3}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="gastos" // This is operational expenses, we might want a better daily data key for daily energy
-                                    name="Gastos Op."
-                                    stroke="#f43f5e"
-                                    fillOpacity={0.5}
-                                    fill="url(#colorEnergy)"
-                                    strokeWidth={2}
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Filament Trend Chart */}
+                    <Card className="shadow-sm border-slate-200">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="text-base font-bold">Historial de Filamento</CardTitle>
+                                <CardDescription>Costo diario estimado en material</CardDescription>
+                            </div>
+                            <div className="p-2 bg-pink-50 text-pink-500 rounded-lg">
+                                <Package size={20} />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="h-[250px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={dailyData}>
+                                    <defs>
+                                        <linearGradient id="colorMaterial" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#ec4899" stopOpacity={0.1} />
+                                            <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis
+                                        dataKey="displayDate"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                        tickFormatter={(val) => `$${val.toLocaleString('es-CL', { notation: 'compact' })}`}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                        formatter={(value: any) => [`$${value.toLocaleString('es-CL')}`, 'Costo Material']}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="material_cost"
+                                        name="Material"
+                                        stroke="#ec4899"
+                                        fillOpacity={1}
+                                        fill="url(#colorMaterial)"
+                                        strokeWidth={3}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+
+                    {/* Energy Trend Chart */}
+                    <Card className="shadow-sm border-slate-200">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="text-base font-bold">Historial de Energía</CardTitle>
+                                <CardDescription>Costo diario estimado en consumo</CardDescription>
+                            </div>
+                            <div className="p-2 bg-amber-50 text-amber-500 rounded-lg">
+                                <Zap size={20} />
+                            </div>
+                        </CardHeader>
+                        <CardContent className="h-[250px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={dailyData}>
+                                    <defs>
+                                        <linearGradient id="colorEnergy" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1} />
+                                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis
+                                        dataKey="displayDate"
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                    />
+                                    <YAxis
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tick={{ fill: '#94a3b8', fontSize: 10 }}
+                                        tickFormatter={(val) => `$${val.toLocaleString('es-CL', { notation: 'compact' })}`}
+                                    />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                                        formatter={(value: any) => [`$${value.toLocaleString('es-CL')}`, 'Costo Energía']}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="energy_cost"
+                                        name="Energía"
+                                        stroke="#f59e0b"
+                                        fillOpacity={1}
+                                        fill="url(#colorEnergy)"
+                                        strokeWidth={3}
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
 
             {/* Analysis Note */}
