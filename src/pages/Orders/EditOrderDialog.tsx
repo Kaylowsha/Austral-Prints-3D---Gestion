@@ -108,8 +108,8 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                 .from('orders')
                 .update({
                     description: formData.description,
-                    client_id: formData.useCustomClient ? null : formData.client_id,
-                    custom_client_name: formData.useCustomClient ? formData.custom_client_name : null,
+                    client_id: formData.useCustomClient ? null : (formData.client_id || null),
+                    custom_client_name: formData.useCustomClient ? (formData.custom_client_name || null) : null,
                     price: Number(formData.price),
                     suggested_price: Number(formData.suggested_price),
                     cost: Number(formData.cost),

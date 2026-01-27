@@ -33,7 +33,8 @@ export default function KanbanBoard() {
             .from('orders')
             .select(`
         *,
-        products (name)
+        products (name),
+        clients (full_name)
       `)
             .neq('status', 'cancelado') // Don't show cancelled for now
             .order('created_at', { ascending: false })
