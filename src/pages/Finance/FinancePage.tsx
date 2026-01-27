@@ -48,6 +48,7 @@ import {
 } from 'recharts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssetsTab } from './AssetsTab'
+import TagManagerDialog from './TagManagerDialog'
 
 export default function FinancePage() {
     const [, setLoading] = useState(true)
@@ -379,22 +380,25 @@ export default function FinancePage() {
                     </Select>
                 </div>
 
-                <div className="flex flex-col gap-1.5 min-w-[200px]">
+                <div className="flex flex-col gap-1.5 min-w-[200px] relative">
                     <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Etiqueta (Criterio)</Label>
-                    <Select value={selectedTag} onValueChange={setSelectedTag}>
-                        <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold">
-                            <div className="flex items-center gap-2">
-                                <Tag size={14} className="text-indigo-500" />
-                                <SelectValue placeholder="Todas las etiquetas" />
-                            </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todas las etiquetas</SelectItem>
-                            {availableTags.map(tag => (
-                                <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                        <Select value={selectedTag} onValueChange={setSelectedTag}>
+                            <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold flex-1">
+                                <div className="flex items-center gap-2">
+                                    <Tag size={14} className="text-indigo-500" />
+                                    <SelectValue placeholder="Todas las etiquetas" />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las etiquetas</SelectItem>
+                                {availableTags.map(tag => (
+                                    <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <TagManagerDialog onSuccess={fetchDetailedStats} />
+                    </div>
                 </div>
 
                 {(selectedClient !== 'all' || selectedTag !== 'all') && (
