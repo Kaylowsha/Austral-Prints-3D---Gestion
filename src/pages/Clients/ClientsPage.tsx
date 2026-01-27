@@ -85,17 +85,32 @@ export default function ClientsPage() {
     const handleDeleteClient = async () => {
         if (!clientToDelete) return
         try {
+            setLoading(true)
+            // 1. Unlink orders and restore name as custom_client_name to avoid data loss
+            const { error: unlinkError } = await supabase
+                .from('orders')
+                .update({
+                    client_id: null,
+                    custom_client_name: clientToDelete.full_name
+                })
+                .eq('client_id', clientToDelete.id)
+
+            if (unlinkError) throw unlinkError
+
+            // 2. Now delete the client
             const { error } = await supabase
                 .from('clients')
                 .delete()
                 .eq('id', clientToDelete.id)
 
             if (error) throw error
-            toast.success('Cliente eliminado')
+            toast.success('Cliente eliminado y sus pedidos fueron conservados como registros manuales')
             fetchClients()
+            findOrphanedNames() // Update rescue tool if needed
         } catch (error: any) {
             toast.error('Error al eliminar cliente', { description: error.message })
         } finally {
+            setLoading(false)
             setIsConfirmOpen(false)
             setClientToDelete(null)
         }
