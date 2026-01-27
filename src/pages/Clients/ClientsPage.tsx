@@ -302,7 +302,7 @@ export default function ClientsPage() {
 
             <ConfirmDialog
                 open={isConfirmOpen}
-                setOpen={setIsConfirmOpen}
+                onOpenChange={setIsConfirmOpen}
                 onConfirm={handleDeleteClient}
                 title="¿Eliminar cliente?"
                 description={`Esta acción no se puede deshacer. Se eliminará a ${clientToDelete?.full_name} de la base de datos.`}
