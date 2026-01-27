@@ -50,6 +50,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssetsTab } from './AssetsTab'
 import TagManagerDialog from './TagManagerDialog'
+import { ProductionCostsTab } from './ProductionCostsTab'
 
 export default function FinancePage() {
     const [, setLoading] = useState(true)
@@ -64,7 +65,11 @@ export default function FinancePage() {
         inversions: 0,
         floating: 0,
         suggested_income: 0,
-        production_cost: 0
+        production_cost: 0,
+        material_cost: 0,
+        energy_cost: 0,
+        total_grams: 0,
+        total_hours: 0
     })
     const [timeframe, setTimeframe] = useState<'7d' | '30d' | 'month' | 'all'>('30d')
     const [categoryData, setCategoryData] = useState<any[]>([])
@@ -170,6 +175,26 @@ export default function FinancePage() {
         // Costo Real de Producción (Material + Energia de lo vendido)
         const realTotalCost = realized_orders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
+        // Desglose de Costos Directos
+        const material_cost = realized_orders.reduce((acc, curr) => {
+            // Si tiene el campo técnico guardado, calculamos su parte
+            if (curr.quoted_grams && curr.quoted_material_price) {
+                const costPerGram = (curr.quoted_material_price || 15000) / 1000;
+                return acc + (curr.quoted_grams * costPerGram * (curr.quantity || 1));
+            }
+            // Si no tiene campos técnicos (pedidos antiguos o simples), asumimos que el 90% es material
+            return acc + ((curr.cost || 0) * 0.9);
+        }, 0)
+
+        const energy_cost = realTotalCost - material_cost
+
+        const total_grams = realized_orders.reduce((acc, curr) => acc + (curr.quoted_grams || 0) * (curr.quantity || 1), 0)
+        const total_hours = realized_orders.reduce((acc, curr) => {
+            const h = curr.quoted_hours || 0
+            const m = curr.quoted_mins || 0
+            return acc + (h + m / 60) * (curr.quantity || 1)
+        }, 0)
+
         // Injections: Only explicit Capital Injections
         const injections = realized_orders
             .filter(o => !o.product_id && o.description === 'Inyección de Capital')
@@ -193,7 +218,11 @@ export default function FinancePage() {
             inversions,
             floating,
             suggested_income,
-            production_cost: realTotalCost
+            production_cost: realTotalCost,
+            material_cost,
+            energy_cost,
+            total_grams,
+            total_hours
         })
 
         // 2. Format Category Data (Operational only)
@@ -229,6 +258,14 @@ export default function FinancePage() {
                 .reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
             const dayProdCost = orders?.filter(o => (o.date || o.created_at).startsWith(date))
                 .reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
+            const dayMaterialCost = orders?.filter(o => (o.date || o.created_at).startsWith(date))
+                .reduce((acc, curr) => {
+                    if (curr.quoted_grams && curr.quoted_material_price) {
+                        return acc + ((curr.quoted_grams * (curr.quoted_material_price / 1000)) * (curr.quantity || 1))
+                    }
+                    return acc + ((curr.cost || 0) * 0.9)
+                }, 0) || 0
+            const dayEnergyCost = dayProdCost - dayMaterialCost
 
             const dayInjections = (realized_orders.filter(o => !o.product_id && o.description === 'Inyección de Capital' && (o.date || o.created_at).startsWith(date)).reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0) +
                 (expenses?.filter(e => e.category === 'inversion' && e.date === date).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0)
@@ -254,8 +291,10 @@ export default function FinancePage() {
                 ingresos_acc: accIngresos, // New Cumulative Key
                 sugerido: dayOpSuggested, // Keep Daily
                 sugerido_acc: accSugerido, // New Cumulative Key
-                costo_directo: dayProdCost, // Keep Daily
-                costo_acc: accCosto, // New Cumulative Key
+                costo_directo: dayProdCost,
+                material_cost: dayMaterialCost,
+                energy_cost: dayEnergyCost,
+                costo_acc: accCosto,
                 gastos: dayOpExpense,
                 balance: runningBalance,
                 net: dayNet
@@ -417,6 +456,7 @@ export default function FinancePage() {
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-white border text-slate-500">
                     <TabsTrigger value="overview" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Resumen</TabsTrigger>
+                    <TabsTrigger value="production" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Costos Directos</TabsTrigger>
                     <TabsTrigger value="valuation" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Valuación</TabsTrigger>
                 </TabsList>
 
@@ -853,6 +893,10 @@ export default function FinancePage() {
                             </CardContent>
                         </Card>
                     </div>
+                </TabsContent>
+
+                <TabsContent value="production">
+                    <ProductionCostsTab stats={stats} dailyData={dailyData} />
                 </TabsContent>
 
                 <TabsContent value="valuation">
