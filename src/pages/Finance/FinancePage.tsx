@@ -50,7 +50,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssetsTab } from './AssetsTab'
 import TagManagerDialog from './TagManagerDialog'
-import { ProductionCostsTab } from './ProductionCostsTab'
 
 export default function FinancePage() {
     const [, setLoading] = useState(true)
@@ -456,7 +455,6 @@ export default function FinancePage() {
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-white border text-slate-500">
                     <TabsTrigger value="overview" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Resumen</TabsTrigger>
-                    <TabsTrigger value="production" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Costos Directos</TabsTrigger>
                     <TabsTrigger value="valuation" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Valuación</TabsTrigger>
                 </TabsList>
 
@@ -893,10 +891,6 @@ export default function FinancePage() {
                             </CardContent>
                         </Card>
                     </div>
-                </TabsContent>
-
-                <TabsContent value="production">
-                    <ProductionCostsTab stats={stats} dailyData={dailyData} />
                 </TabsContent>
 
                 <TabsContent value="valuation">
