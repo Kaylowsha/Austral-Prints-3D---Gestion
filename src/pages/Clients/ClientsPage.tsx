@@ -17,6 +17,7 @@ import {
 import { toast } from 'sonner'
 import ClientDialog from './ClientDialog'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import ClientDetailsDialog from './ClientDetailsDialog'
 
 export default function ClientsPage() {
     const [loading, setLoading] = useState(true)
@@ -27,6 +28,7 @@ export default function ClientsPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [selectedClient, setSelectedClient] = useState<any>(null)
     const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false)
     const [clientToDelete, setClientToDelete] = useState<any>(null)
 
     // Rescue Tool states
@@ -247,7 +249,11 @@ export default function ClientsPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {filteredClients.map((client) => (
-                                    <tr key={client.id} className="group hover:bg-slate-50 transition-colors">
+                                    <tr
+                                        key={client.id}
+                                        className="group hover:bg-slate-50 transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-indigo-600 active:bg-slate-100"
+                                        onClick={() => { setSelectedClient(client); setIsDetailsOpen(true); }}
+                                    >
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-sm">
@@ -278,7 +284,7 @@ export default function ClientsPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => { setSelectedClient(client); setIsDialogOpen(true); }}
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedClient(client); setIsDialogOpen(true); }}
                                                     className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600"
                                                 >
                                                     <Edit2 size={16} />
@@ -286,7 +292,7 @@ export default function ClientsPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => { setClientToDelete(client); setIsConfirmOpen(true); }}
+                                                    onClick={(e) => { e.stopPropagation(); setClientToDelete(client); setIsConfirmOpen(true); }}
                                                     className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500"
                                                 >
                                                     <Trash2 size={16} />
@@ -321,6 +327,12 @@ export default function ClientsPage() {
                 onConfirm={handleDeleteClient}
                 title="¿Eliminar cliente?"
                 description={`Esta acción no se puede deshacer. Se eliminará a ${clientToDelete?.full_name} de la base de datos.`}
+            />
+
+            <ClientDetailsDialog
+                open={isDetailsOpen}
+                onOpenChange={setIsDetailsOpen}
+                client={selectedClient}
             />
         </div>
     )
