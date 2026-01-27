@@ -131,8 +131,8 @@ export function ProductionCostsTab({ stats, dailyData }: ProductionCostsTabProps
                     <Card className="shadow-sm border-slate-200">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
-                                <CardTitle className="text-base font-bold">Historial de Filamento</CardTitle>
-                                <CardDescription>Costo diario estimado en material</CardDescription>
+                                <CardTitle className="text-base font-bold">Acumulado Filamento</CardTitle>
+                                <CardDescription>Costo total acumulado en el periodo</CardDescription>
                             </div>
                             <div className="p-2 bg-pink-50 text-pink-500 rounded-lg">
                                 <Package size={20} />
@@ -162,11 +162,11 @@ export function ProductionCostsTab({ stats, dailyData }: ProductionCostsTabProps
                                     />
                                     <Tooltip
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                        formatter={(value: any) => [`$${value.toLocaleString('es-CL')}`, 'Costo Material']}
+                                        formatter={(value: any) => [`$${value.toLocaleString('es-CL')}`, 'Acumulado Material']}
                                     />
                                     <Area
                                         type="monotone"
-                                        dataKey="material_cost"
+                                        dataKey="acc_material"
                                         name="Material"
                                         stroke="#ec4899"
                                         fillOpacity={1}
@@ -182,8 +182,8 @@ export function ProductionCostsTab({ stats, dailyData }: ProductionCostsTabProps
                     <Card className="shadow-sm border-slate-200">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
-                                <CardTitle className="text-base font-bold">Historial de Energía</CardTitle>
-                                <CardDescription>Costo diario estimado en consumo</CardDescription>
+                                <CardTitle className="text-base font-bold">Acumulado Energía</CardTitle>
+                                <CardDescription>Costo total acumulado en el periodo</CardDescription>
                             </div>
                             <div className="p-2 bg-amber-50 text-amber-500 rounded-lg">
                                 <Zap size={20} />
@@ -213,11 +213,11 @@ export function ProductionCostsTab({ stats, dailyData }: ProductionCostsTabProps
                                     />
                                     <Tooltip
                                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                                        formatter={(value: any) => [`$${value.toLocaleString('es-CL')}`, 'Costo Energía']}
+                                        formatter={(value: any) => [`$${value.toLocaleString('es-CL')}`, 'Acumulado Energía']}
                                     />
                                     <Area
                                         type="monotone"
-                                        dataKey="energy_cost"
+                                        dataKey="acc_energy"
                                         name="Energía"
                                         stroke="#f59e0b"
                                         fillOpacity={1}

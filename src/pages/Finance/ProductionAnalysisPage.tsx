@@ -87,6 +87,9 @@ export default function ProductionAnalysisPage() {
             return d.toISOString().split('T')[0]
         })
 
+        let cumulativeMaterial = 0
+        let cumulativeEnergy = 0
+
         const historyData = timeline.map(date => {
             const dayOrders = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado') || []
             const dayProdCost = dayOrders.reduce((acc, curr) => acc + (curr.cost || 0), 0)
@@ -98,12 +101,19 @@ export default function ProductionAnalysisPage() {
                 return acc + ((curr.cost || 0) * 0.9)
             }, 0)
 
+            const dayEnergyCost = Math.max(0, dayProdCost - dayMaterialCost)
+
+            cumulativeMaterial += dayMaterialCost
+            cumulativeEnergy += dayEnergyCost
+
             return {
                 date,
                 displayDate: new Date(date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
                 costo_directo: dayProdCost,
                 material_cost: dayMaterialCost,
-                energy_cost: Math.max(0, dayProdCost - dayMaterialCost)
+                energy_cost: dayEnergyCost,
+                acc_material: cumulativeMaterial,
+                acc_energy: cumulativeEnergy
             }
         })
 
