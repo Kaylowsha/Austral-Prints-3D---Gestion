@@ -39,7 +39,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
         description: '',
         price: '',
         deadline: '',
-        quantity: '1'
+        quantity: '1',
+        tags: ''
     })
 
     useEffect(() => {
@@ -97,6 +98,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     deadline: formData.deadline || null,
                     status: 'pendiente',
                     date: new Date().toISOString().split('T')[0],
+                    tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
                     created_at: new Date().toISOString()
                 }
             ]).select()
@@ -114,7 +116,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
 
             toast.success('Pedido registrado')
             setOpen(false)
-            setFormData({ product_id: '', inventory_id: '', description: '', price: '', deadline: '', quantity: '1' })
+            setFormData({ product_id: '', inventory_id: '', description: '', price: '', deadline: '', quantity: '1', tags: '' })
             if (onSuccess) onSuccess()
 
         } catch (error: any) {
@@ -220,6 +222,15 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                                 ${(Number(formData.price || 0) * Number(formData.quantity || 1)).toLocaleString('es-CL')}
                             </span>
                         </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Etiquetas (separadas por coma)</Label>
+                        <Input
+                            value={formData.tags}
+                            onChange={e => setFormData({ ...formData, tags: e.target.value })}
+                            placeholder="Ej: san valentin, regalo, urgente"
+                        />
                     </div>
 
                     <DialogFooter>

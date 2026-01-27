@@ -10,12 +10,25 @@ import {
     Zap,
     LineChart as LineChartIcon,
     PieChart as PieChartIcon,
-    BarChart3
+    BarChart3,
+    Filter,
+    User,
+    Tag,
+    X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import IncomeDialog from './IncomeDialog'
 import ExpenseDialog from './ExpenseDialog'
 import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import {
     BarChart,
     Bar,
@@ -57,10 +70,25 @@ export default function FinancePage() {
     const [cumulativeData, setCumulativeData] = useState<any[]>([])
     const [transactions, setTransactions] = useState<any[]>([])
     const [inventoryValue, setInventoryValue] = useState(0)
+    const [clients, setClients] = useState<any[]>([])
+
+    // Filters State
+    const [selectedClient, setSelectedClient] = useState<string>('all')
+    const [selectedTag, setSelectedTag] = useState<string>('all')
+    const [availableTags, setAvailableTags] = useState<string[]>([])
+
+    useEffect(() => {
+        fetchClients()
+    }, [])
 
     useEffect(() => {
         fetchDetailedStats()
-    }, [timeframe])
+    }, [timeframe, selectedClient, selectedTag])
+
+    const fetchClients = async () => {
+        const { data } = await supabase.from('clients').select('*').order('full_name')
+        if (data) setClients(data)
+    }
 
     const fetchDetailedStats = async () => {
         setLoading(true)
@@ -89,8 +117,24 @@ export default function FinancePage() {
             expensesQuery = expensesQuery.gte('date', startDate)
         }
 
+        if (selectedClient !== 'all') {
+            ordersQuery = ordersQuery.eq('client_id', selectedClient)
+            // Expenses don't usually have client_id, but if they did we'd filter here
+        }
+
+        if (selectedTag !== 'all') {
+            ordersQuery = ordersQuery.contains('tags', [selectedTag])
+            expensesQuery = expensesQuery.contains('tags', [selectedTag])
+        }
+
         const { data: orders } = await ordersQuery
         const { data: expenses } = await expensesQuery
+
+        // Extract and deduplicate tags for the filter dropdown
+        const allTags = new Set<string>()
+        orders?.forEach(o => o.tags?.forEach((t: string) => allTags.add(t)))
+        expenses?.forEach(e => e.tags?.forEach((t: string) => allTags.add(t)))
+        setAvailableTags(Array.from(allTags).sort())
 
         // Fetch Inventory for Valuation (Current Snapshot)
         const { data: inventory } = await supabase.from('inventory').select('stock_grams, price_per_kg')
@@ -309,6 +353,61 @@ export default function FinancePage() {
                     </div>
                 </div>
             </header>
+
+            {/* Filtros Avanzados */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2 text-slate-400 mr-2 border-r pr-4">
+                    <Filter size={18} />
+                    <span className="text-xs font-bold uppercase tracking-widest">Filtros</span>
+                </div>
+
+                <div className="flex flex-col gap-1.5 min-w-[200px]">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Cliente</Label>
+                    <Select value={selectedClient} onValueChange={setSelectedClient}>
+                        <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold">
+                            <div className="flex items-center gap-2">
+                                <User size={14} className="text-indigo-500" />
+                                <SelectValue placeholder="Todos los clientes" />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los clientes</SelectItem>
+                            {clients.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="flex flex-col gap-1.5 min-w-[200px]">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Etiqueta (Criterio)</Label>
+                    <Select value={selectedTag} onValueChange={setSelectedTag}>
+                        <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold">
+                            <div className="flex items-center gap-2">
+                                <Tag size={14} className="text-indigo-500" />
+                                <SelectValue placeholder="Todas las etiquetas" />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas las etiquetas</SelectItem>
+                            {availableTags.map(tag => (
+                                <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {(selectedClient !== 'all' || selectedTag !== 'all') && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setSelectedClient('all'); setSelectedTag('all'); }}
+                        className="mt-5 h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-bold text-xs gap-2"
+                    >
+                        <X size={14} /> Limpiar
+                    </Button>
+                )}
+            </div>
 
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-white border text-slate-500">
@@ -677,6 +776,15 @@ export default function FinancePage() {
                                                                     <span className="w-1 h-1 rounded-full bg-slate-300" />
                                                                     {t.author}
                                                                 </p>
+                                                                {t.tags && t.tags.length > 0 && (
+                                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                                        {t.tags.map((tag: string) => (
+                                                                            <span key={tag} className="text-[9px] font-bold bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                                                                <Tag size={8} /> {tag}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </td>
@@ -734,7 +842,7 @@ export default function FinancePage() {
                     <AssetsTab cashBalance={stats.balance} inventoryValue={inventoryValue} />
                 </TabsContent>
             </Tabs>
-        </div>
+        </div >
     )
 }
 

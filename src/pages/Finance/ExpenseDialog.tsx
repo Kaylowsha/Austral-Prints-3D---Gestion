@@ -35,7 +35,8 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
         category: '',
         amount: '',
         description: '',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        tags: ''
     })
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -48,7 +49,8 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
                     category: formData.category,
                     amount: Number(formData.amount),
                     description: formData.description,
-                    date: formData.date
+                    date: formData.date,
+                    tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
                 }
             ]).select()
 
@@ -66,7 +68,7 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
 
             toast.success('Gasto registrado')
             setOpen(false)
-            setFormData({ category: '', amount: '', description: '', date: new Date().toISOString().split('T')[0] })
+            setFormData({ category: '', amount: '', description: '', date: new Date().toISOString().split('T')[0], tags: '' })
             if (onSuccess) onSuccess()
 
         } catch (error: any) {
@@ -139,6 +141,15 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
                             placeholder="¿En qué se usó?"
+                        />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Etiquetas (separadas por coma)</Label>
+                        <Input
+                            value={formData.tags}
+                            onChange={e => setFormData({ ...formData, tags: e.target.value })}
+                            placeholder="Ej: insumos, san valentin"
                         />
                     </div>
 

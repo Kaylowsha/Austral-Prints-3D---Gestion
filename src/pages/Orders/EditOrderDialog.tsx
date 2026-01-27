@@ -52,7 +52,8 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
         power: order.quoted_power_watts || 100,
         opMult: order.quoted_op_multiplier || 1.5,
         salesMult: order.quoted_sales_multiplier || 3.0,
-        matPrice: order.quoted_material_price || 15000
+        matPrice: order.quoted_material_price || 15000,
+        tags: order.tags ? order.tags.join(', ') : ''
     })
 
     useEffect(() => {
@@ -121,7 +122,8 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                     quoted_power_watts: Number(formData.power),
                     quoted_op_multiplier: Number(formData.opMult),
                     quoted_sales_multiplier: Number(formData.salesMult),
-                    quoted_material_price: Number(formData.matPrice)
+                    quoted_material_price: Number(formData.matPrice),
+                    tags: formData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag !== '')
                 })
                 .eq('id', order.id)
 
@@ -273,6 +275,15 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                             <Label>Fecha Entrega</Label>
                             <Input type="date" value={formData.deadline} onChange={e => setFormData({ ...formData, deadline: e.target.value })} />
                         </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Etiquetas (separadas por coma)</Label>
+                        <Input
+                            value={formData.tags}
+                            onChange={e => setFormData({ ...formData, tags: e.target.value })}
+                            placeholder="Ej: san valentin, regalo, urgente"
+                        />
                     </div>
 
                     <DialogFooter>
