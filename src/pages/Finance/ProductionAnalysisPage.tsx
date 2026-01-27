@@ -62,7 +62,7 @@ export default function ProductionAnalysisPage() {
             return acc + ((curr.cost || 0) * 0.9)
         }, 0)
 
-        const energy_cost = production_cost - material_cost
+        const energy_cost = Math.max(0, production_cost - material_cost)
 
         const total_grams = realized_orders.reduce((acc, curr) => acc + (curr.quoted_grams || 0) * (curr.quantity || 1), 0)
         const total_hours = realized_orders.reduce((acc, curr) => {
@@ -88,23 +88,22 @@ export default function ProductionAnalysisPage() {
         })
 
         const historyData = timeline.map(date => {
-            const dayProdCost = orders?.filter(o => (o.date || o.created_at).startsWith(date))
-                .reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
+            const dayOrders = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado') || []
+            const dayProdCost = dayOrders.reduce((acc, curr) => acc + (curr.cost || 0), 0)
 
-            const dayMaterialCost = orders?.filter(o => (o.date || o.created_at).startsWith(date))
-                .reduce((acc, curr) => {
-                    if (curr.quoted_grams && curr.quoted_material_price) {
-                        return acc + ((curr.quoted_grams * (curr.quoted_material_price / 1000)) * (curr.quantity || 1))
-                    }
-                    return acc + ((curr.cost || 0) * 0.9)
-                }, 0) || 0
+            const dayMaterialCost = dayOrders.reduce((acc, curr) => {
+                if (curr.quoted_grams && curr.quoted_material_price) {
+                    return acc + ((curr.quoted_grams * (curr.quoted_material_price / 1000)) * (curr.quantity || 1))
+                }
+                return acc + ((curr.cost || 0) * 0.9)
+            }, 0)
 
             return {
                 date,
                 displayDate: new Date(date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' }),
                 costo_directo: dayProdCost,
                 material_cost: dayMaterialCost,
-                energy_cost: dayProdCost - dayMaterialCost
+                energy_cost: Math.max(0, dayProdCost - dayMaterialCost)
             }
         })
 
