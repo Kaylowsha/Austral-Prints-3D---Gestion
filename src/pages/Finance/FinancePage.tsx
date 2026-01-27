@@ -14,6 +14,7 @@ import {
     Filter,
     User,
     Tag,
+    Package,
     X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -183,7 +184,7 @@ export default function FinancePage() {
 
         setStats({
             income: op_income,
-            expenses: op_expenses + realTotalCost,
+            expenses: op_expenses,
             profit,
             margin,
             balance,
@@ -428,6 +429,18 @@ export default function FinancePage() {
                             value={`$${stats.income.toLocaleString('es-CL')}`}
                             icon={<ArrowUpRight className="text-green-500" />}
                             subValue="Ventas entregadas/pagadas"
+                        />
+                        <MetricCard
+                            title="Gastos Operativos"
+                            value={`$${stats.expenses.toLocaleString('es-CL')}`}
+                            icon={<ArrowDownRight className="text-rose-500" />}
+                            subValue="Compras y gastos registrados"
+                        />
+                        <MetricCard
+                            title="Costos Directos"
+                            value={`$${stats.production_cost.toLocaleString('es-CL')}`}
+                            icon={<Package className="text-pink-500" />}
+                            subValue="Costo de material y energía"
                         />
                         <MetricCard
                             title="Ingresos Flotantes"

@@ -85,7 +85,7 @@ export default function Dashboard() {
 
         setFinancials({
             income: realTotalIncome,
-            expenses: realTotalExpenses + realTotalCost,
+            expenses: realTotalExpenses,
             production_cost: realTotalCost,
             balance: finalBalance,
             floating: floatingIncome
