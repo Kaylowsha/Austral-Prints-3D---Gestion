@@ -32,6 +32,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
     const [loading, setLoading] = useState(false)
     const [products, setProducts] = useState<any[]>([])
     const [inventory, setInventory] = useState<any[]>([])
+    const [clients, setClients] = useState<any[]>([])
 
     const [formData, setFormData] = useState({
         product_id: '',
@@ -40,13 +41,17 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
         price: '',
         deadline: '',
         quantity: '1',
-        tags: ''
+        tags: '',
+        client_id: '',
+        custom_client_name: '',
+        useCustomClient: false
     })
 
     useEffect(() => {
         if (open) {
             fetchProducts()
             fetchInventory()
+            fetchClients()
         }
     }, [open])
 
@@ -63,6 +68,11 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
             .gt('stock_grams', 0)
             .order('name')
         if (data) setInventory(data)
+    }
+
+    const fetchClients = async () => {
+        const { data } = await supabase.from('clients').select('*').order('full_name')
+        if (data) setClients(data)
     }
 
     const handleProductChange = (productId: string) => {
@@ -90,6 +100,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
             const { data, error } = await supabase.from('orders').insert([
                 {
                     product_id: formData.product_id,
+                    client_id: formData.useCustomClient ? null : formData.client_id || null,
+                    custom_client_name: formData.useCustomClient ? formData.custom_client_name : null,
                     inventory_id: formData.inventory_id || null, // Link to specific filament
                     description: formData.description,
                     price: Number(formData.price),
@@ -116,7 +128,18 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
 
             toast.success('Pedido registrado')
             setOpen(false)
-            setFormData({ product_id: '', inventory_id: '', description: '', price: '', deadline: '', quantity: '1', tags: '' })
+            setFormData({
+                product_id: '',
+                inventory_id: '',
+                description: '',
+                price: '',
+                deadline: '',
+                quantity: '1',
+                tags: '',
+                client_id: '',
+                custom_client_name: '',
+                useCustomClient: false
+            })
             if (onSuccess) onSuccess()
 
         } catch (error: any) {
@@ -141,7 +164,41 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                         Registra un nuevo encargo vinculándolo a un material.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[80vh] overflow-y-auto pr-2">
+
+                    <div className="grid gap-2">
+                        <div className="flex items-center justify-between">
+                            <Label>Cliente</Label>
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, useCustomClient: !formData.useCustomClient })}
+                                className="text-[10px] font-bold text-indigo-600 uppercase hover:underline"
+                            >
+                                {formData.useCustomClient ? 'Elegir registrado' : 'Ingresar manual'}
+                            </button>
+                        </div>
+                        {formData.useCustomClient ? (
+                            <Input
+                                placeholder="Nombre completo del cliente..."
+                                value={formData.custom_client_name}
+                                onChange={e => setFormData({ ...formData, custom_client_name: e.target.value })}
+                            />
+                        ) : (
+                            <Select onValueChange={(val) => setFormData({ ...formData, client_id: val })} value={formData.client_id}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar cliente registrado..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {clients.map(c => (
+                                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                                    ))}
+                                    {clients.length === 0 && (
+                                        <SelectItem value="none" disabled>No hay clientes registrados</SelectItem>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    </div>
 
                     <div className="grid gap-2">
                         <Label>Producto</Label>
