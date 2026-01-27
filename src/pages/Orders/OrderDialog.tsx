@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabase'
 import { logAuditAction } from '@/lib/audit'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
+import TagSelector from '@/components/TagSelector'
 
 interface OrderDialogProps {
     onSuccess?: () => void
@@ -41,7 +42,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
         price: '',
         deadline: '',
         quantity: '1',
-        tags: '',
+        tags: [] as string[],
         client_id: '',
         custom_client_name: '',
         useCustomClient: false
@@ -110,7 +111,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     deadline: formData.deadline || null,
                     status: 'pendiente',
                     date: new Date().toISOString().split('T')[0],
-                    tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
+                    tags: formData.tags,
                     created_at: new Date().toISOString()
                 }
             ]).select()
@@ -135,7 +136,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                 price: '',
                 deadline: '',
                 quantity: '1',
-                tags: '',
+                tags: [],
                 client_id: '',
                 custom_client_name: '',
                 useCustomClient: false
@@ -282,11 +283,10 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Etiquetas (separadas por coma)</Label>
-                        <Input
-                            value={formData.tags}
-                            onChange={e => setFormData({ ...formData, tags: e.target.value })}
-                            placeholder="Ej: san valentin, regalo, urgente"
+                        <Label>Etiquetas</Label>
+                        <TagSelector
+                            selectedTags={formData.tags}
+                            onChange={(tags) => setFormData({ ...formData, tags })}
                         />
                     </div>
 

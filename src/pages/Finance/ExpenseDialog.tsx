@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabase'
 import { logAuditAction } from '@/lib/audit'
 import { toast } from 'sonner'
 import { Minus } from 'lucide-react'
+import TagSelector from '@/components/TagSelector'
 
 interface ExpenseDialogProps {
     onSuccess?: () => void
@@ -36,7 +37,7 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
         amount: '',
         description: '',
         date: new Date().toISOString().split('T')[0],
-        tags: ''
+        tags: [] as string[]
     })
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -50,7 +51,7 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
                     amount: Number(formData.amount),
                     description: formData.description,
                     date: formData.date,
-                    tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
+                    tags: formData.tags
                 }
             ]).select()
 
@@ -68,7 +69,7 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
 
             toast.success('Gasto registrado')
             setOpen(false)
-            setFormData({ category: '', amount: '', description: '', date: new Date().toISOString().split('T')[0], tags: '' })
+            setFormData({ category: '', amount: '', description: '', date: new Date().toISOString().split('T')[0], tags: [] })
             if (onSuccess) onSuccess()
 
         } catch (error: any) {
@@ -145,11 +146,10 @@ export default function ExpenseDialog({ onSuccess }: ExpenseDialogProps) {
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Etiquetas (separadas por coma)</Label>
-                        <Input
-                            value={formData.tags}
-                            onChange={e => setFormData({ ...formData, tags: e.target.value })}
-                            placeholder="Ej: insumos, san valentin"
+                        <Label>Etiquetas</Label>
+                        <TagSelector
+                            selectedTags={formData.tags}
+                            onChange={(tags) => setFormData({ ...formData, tags })}
                         />
                     </div>
 

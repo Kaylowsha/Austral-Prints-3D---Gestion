@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { Pencil, Calculator } from 'lucide-react'
 import { calculateQuotation, type QuotationParams } from '@/lib/quotation'
+import TagSelector from '@/components/TagSelector'
 
 interface EditOrderDialogProps {
     order: any
@@ -53,7 +54,7 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
         opMult: order.quoted_op_multiplier || 1.5,
         salesMult: order.quoted_sales_multiplier || 3.0,
         matPrice: order.quoted_material_price || 15000,
-        tags: order.tags ? order.tags.join(', ') : ''
+        tags: order.tags || [] as string[]
     })
 
     useEffect(() => {
@@ -123,7 +124,7 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                     quoted_op_multiplier: Number(formData.opMult),
                     quoted_sales_multiplier: Number(formData.salesMult),
                     quoted_material_price: Number(formData.matPrice),
-                    tags: formData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag !== '')
+                    tags: formData.tags
                 })
                 .eq('id', order.id)
 
@@ -278,11 +279,10 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Etiquetas (separadas por coma)</Label>
-                        <Input
-                            value={formData.tags}
-                            onChange={e => setFormData({ ...formData, tags: e.target.value })}
-                            placeholder="Ej: san valentin, regalo, urgente"
+                        <Label>Etiquetas</Label>
+                        <TagSelector
+                            selectedTags={formData.tags}
+                            onChange={(tags) => setFormData({ ...formData, tags })}
                         />
                     </div>
 

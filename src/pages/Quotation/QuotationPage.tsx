@@ -3,6 +3,7 @@ import { Calculator, Zap, Clock, Save, Package2, ShoppingBag, TrendingUp, Settin
 import { supabase } from '@/lib/supabase';
 import { calculateQuotation, type QuotationParams } from '@/lib/quotation';
 import { toast } from 'sonner';
+import TagSelector from '@/components/TagSelector';
 
 import {
     Dialog,
@@ -95,7 +96,8 @@ const QuotationPage = () => {
         description: '',
         finalPrice: 0,
         customClientName: '',
-        useCustomClient: true
+        useCustomClient: true,
+        tags: [] as string[]
     });
 
     const fetchInventory = async () => {
@@ -214,7 +216,8 @@ const QuotationPage = () => {
                 quoted_power_watts: getMaterialPower(selectedMaterial?.material_type || 'PLA'),
                 quoted_op_multiplier: config.operationalMultiplier,
                 quoted_sales_multiplier: config.salesMultiplier,
-                quoted_material_price: selectedMaterial?.price_per_kg || 15000
+                quoted_material_price: selectedMaterial?.price_per_kg || 15000,
+                tags: orderData.tags
             }]);
 
             if (error) throw error;
@@ -223,7 +226,7 @@ const QuotationPage = () => {
             setIsConverting(false);
             toast.success('¡Pedido creado con éxito!');
             setIsConverting(false);
-            setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true });
+            setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true, tags: [] });
             setQuantity(1);
         } catch (err: any) {
             toast.error('Error al crear pedido', { description: err.message });
@@ -514,6 +517,13 @@ const QuotationPage = () => {
                         <div className="grid gap-2">
                             <Label>Precio Final ($)</Label>
                             <Input type="number" value={orderData.finalPrice} onChange={e => setOrderData({ ...orderData, finalPrice: Number(e.target.value) })} className="text-xl font-black text-indigo-600" />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>Etiquetas</Label>
+                            <TagSelector
+                                selectedTags={orderData.tags}
+                                onChange={(tags) => setOrderData({ ...orderData, tags })}
+                            />
                         </div>
                     </div>
                     <DialogFooter>
