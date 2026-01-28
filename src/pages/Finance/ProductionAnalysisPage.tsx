@@ -32,11 +32,11 @@ export default function ProductionAnalysisPage() {
         const now = new Date()
         if (timeframe === '7d') {
             const d = new Date()
-            d.setDate(d.getDate() - 7)
+            d.setDate(d.getDate() - 8) // 8 days to handle timezone overlaps
             startDate = d.toISOString().split('T')[0]
         } else if (timeframe === '30d') {
             const d = new Date()
-            d.setDate(d.getDate() - 30)
+            d.setDate(d.getDate() - 31)
             startDate = d.toISOString().split('T')[0]
         } else if (timeframe === 'month') {
             startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
@@ -48,7 +48,7 @@ export default function ProductionAnalysisPage() {
         }
 
         const { data: orders } = await ordersQuery
-        const realized_orders = orders?.filter(o => ['entregado'].includes(o.status)) || []
+        const realized_orders = orders?.filter(o => o.status !== 'cancelado') || []
 
         // Total Production Cost
         const production_cost = realized_orders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
@@ -64,11 +64,16 @@ export default function ProductionAnalysisPage() {
 
         const energy_cost = Math.max(0, production_cost - material_cost)
 
-        const total_grams = realized_orders.reduce((acc, curr) => acc + (curr.quoted_grams || 0) * (curr.quantity || 1), 0)
+        const total_grams = realized_orders.reduce((acc, curr) => {
+            const grams = curr.quoted_grams || (curr.cost ? curr.cost / 20 : 0)
+            return acc + (grams * (curr.quantity || 1))
+        }, 0)
+
         const total_hours = realized_orders.reduce((acc, curr) => {
             const h = curr.quoted_hours || 0
             const m = curr.quoted_mins || 0
-            return acc + (h + m / 60) * (curr.quantity || 1)
+            const totalH = (h + m / 60) || (curr.cost ? (curr.cost / 20) / 50 : 0) // rough estimate if missing params
+            return acc + (totalH * (curr.quantity || 1))
         }, 0)
 
         setStats({
@@ -91,7 +96,7 @@ export default function ProductionAnalysisPage() {
         let cumulativeEnergy = 0
 
         const historyData = timeline.map(date => {
-            const dayOrders = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado') || []
+            const dayOrders = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status !== 'cancelado') || []
             const dayProdCost = dayOrders.reduce((acc, curr) => acc + (curr.cost || 0), 0)
 
             const dayMaterialCost = dayOrders.reduce((acc, curr) => {
