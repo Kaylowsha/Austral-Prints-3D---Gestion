@@ -456,26 +456,45 @@ const QuotationPage = () => {
                                 />
                             </div>
                         </div>
+
+                        {/* Additional Costs Section */}
+                        <div className="pt-6 border-t border-slate-200">
+                            <AdditionalCostsInput
+                                costs={orderData.additional_costs}
+                                onChange={(costs) => setOrderData({ ...orderData, additional_costs: costs })}
+                            />
+                        </div>
                     </div>
                 </div>
 
                 <div className="space-y-6">
                     <div className="bg-slate-900 text-white p-8 rounded-[3rem] shadow-2xl space-y-8 relative overflow-hidden flex flex-col min-h-[500px]">
                         <div className="relative">
-                            <p className="text-slate-400 font-bold tracking-widest uppercase text-[10px]">Precio Sugerido</p>
+                            <p className="text-slate-400 font-bold tracking-widest uppercase text-[10px]">
+                                {orderData.additional_costs.length > 0 ? 'Total Final' : 'Precio Sugerido'}
+                            </p>
                             <h3 className="text-6xl font-black mt-3 text-emerald-400 tabular-nums">
-                                ${results.finalPrice.toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                ${(results.finalPrice + orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
                             </h3>
+                            {orderData.additional_costs.length > 0 && (
+                                <p className="text-slate-500 text-sm mt-2 italic">
+                                    Incluye ${orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0).toLocaleString('es-CL')} en costos adicionales
+                                </p>
+                            )}
                         </div>
 
                         <div className="space-y-5 pt-8 border-t border-slate-800 flex-1">
                             <div className="flex justify-between items-center group">
+                                <span className="text-slate-500 text-sm italic">Precio Base</span>
+                                <span className="font-bold text-xl tabular-nums">${results.finalPrice.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                            </div>
+                            <div className="flex justify-between items-center group">
                                 <span className="text-slate-500 text-sm italic">Costo Directo</span>
-                                <span className="font-bold text-xl tabular-nums">${results.directCost.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                <span className="font-bold text-lg tabular-nums text-slate-400">${results.directCost.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
                             </div>
                             <div className="flex justify-between items-center group">
                                 <span className="text-slate-500 text-sm italic">Costo Total (x1.5)</span>
-                                <span className="font-bold text-xl text-indigo-400 tabular-nums">${results.totalOperationalCost.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
+                                <span className="font-bold text-lg text-indigo-400 tabular-nums">${results.totalOperationalCost.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
                             </div>
                             {orderData.additional_costs.length > 0 && (
                                 <div className="pt-4 border-t border-slate-700">
