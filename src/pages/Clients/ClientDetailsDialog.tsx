@@ -16,6 +16,7 @@ import {
     Loader2,
     Clock
 } from 'lucide-react'
+import { calculateOrderTotal } from '@/lib/orderUtils'
 
 interface ClientDetailsDialogProps {
     open: boolean
@@ -57,8 +58,8 @@ export default function ClientDetailsDialog({ open, onOpenChange, client }: Clie
             const deliveredOrders = history.filter(o => o.status === 'entregado')
             const pendingOrders = history.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status))
 
-            const charged = deliveredOrders.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0)
-            const pending = pendingOrders.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0)
+            const charged = deliveredOrders.reduce((acc, curr) => acc + calculateOrderTotal(curr), 0)
+            const pending = pendingOrders.reduce((acc, curr) => acc + calculateOrderTotal(curr), 0)
             const cost = history.filter(o => o.status !== 'cancelado').reduce((acc, curr) => acc + (curr.cost || 0), 0)
 
             setStats({
@@ -163,7 +164,7 @@ export default function ClientDetailsDialog({ open, onOpenChange, client }: Clie
                                         <div className="flex items-center gap-4">
                                             <div className="text-right">
                                                 <p className="font-black text-slate-900 text-sm">
-                                                    ${(order.price * order.quantity).toLocaleString('es-CL')}
+                                                    ${calculateOrderTotal(order).toLocaleString('es-CL')}
                                                 </p>
                                                 {order.quantity > 1 && (
                                                     <p className="text-[10px] text-slate-400 font-bold">x{order.quantity} un.</p>

@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { History, TrendingUp, TrendingDown } from 'lucide-react'
 import IncomeDialog from './Finance/IncomeDialog'
 import ExpenseDialog from './Finance/ExpenseDialog'
+import { calculateOrderTotal } from '@/lib/orderUtils'
 
 export default function Dashboard() {
     const [user, setUser] = useState<any>(null)
@@ -63,11 +64,11 @@ export default function Dashboard() {
 
         const realTotalIncome = realizedOrders
             .filter(o => o.product_id || (o as any).description !== 'Inyección de Capital')
-            .reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
+            .reduce((acc, curr) => acc + calculateOrderTotal(curr), 0) || 0
         const realTotalCost = realizedOrders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
         // Floating: All pending orders
-        const floatingIncome = pendingOrders.reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
+        const floatingIncome = pendingOrders.reduce((acc, curr) => acc + calculateOrderTotal(curr), 0) || 0
 
         const { data: allExpensesData } = await supabase.from('expenses').select('amount, category')
         const realTotalExpenses = allExpensesData?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
@@ -79,7 +80,7 @@ export default function Dashboard() {
         // Injections: Only explicit Capital Injections
         const totalInjections = realizedOrders
             .filter(o => !o.product_id && (o as any).description === 'Inyección de Capital')
-            .reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
+            .reduce((acc, curr) => acc + calculateOrderTotal(curr), 0) || 0
 
         const finalBalance = netProfit + totalInjections - totalInversions - totalWithdrawals
 
@@ -95,7 +96,7 @@ export default function Dashboard() {
         const incomeItems = (orders || []).map(o => ({
             id: o.id,
             type: 'income',
-            amount: o.price * (o.quantity || 1),
+            amount: calculateOrderTotal(o),
             description: o.description || 'Venta',
             status: o.status,
             date: o.date || o.created_at,
