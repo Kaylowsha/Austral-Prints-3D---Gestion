@@ -23,6 +23,7 @@ import { logAuditAction } from '@/lib/audit'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import TagSelector from '@/components/TagSelector'
+import AdditionalCostsInput, { type AdditionalCost } from '@/components/AdditionalCostsInput'
 
 interface OrderDialogProps {
     onSuccess?: () => void
@@ -45,7 +46,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
         tags: [] as string[],
         client_id: '',
         custom_client_name: '',
-        useCustomClient: false
+        useCustomClient: false,
+        additional_costs: [] as AdditionalCost[]
     })
 
     useEffect(() => {
@@ -120,6 +122,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     quoted_hours: hours,
                     quoted_mins: mins,
                     quoted_material_price: materialPrice,
+                    additional_costs: formData.additional_costs,
                     created_at: new Date().toISOString()
                 }
             ]).select()
@@ -147,7 +150,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                 tags: [],
                 client_id: '',
                 custom_client_name: '',
-                useCustomClient: false
+                useCustomClient: false,
+                additional_costs: []
             })
             if (onSuccess) onSuccess()
 
@@ -273,6 +277,13 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                         </div>
                     </div>
 
+                    <div className="grid gap-2">
+                        <AdditionalCostsInput
+                            costs={formData.additional_costs}
+                            onChange={(costs) => setFormData({ ...formData, additional_costs: costs })}
+                        />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label>Fecha Entrega</Label>
@@ -285,7 +296,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                         <div className="bg-slate-50 p-2 rounded-lg border border-dashed border-slate-200 flex flex-col justify-center items-center">
                             <span className="text-[10px] font-bold text-slate-400 uppercase">Total Estimado</span>
                             <span className="text-lg font-black text-indigo-600">
-                                ${(Number(formData.price || 0) * Number(formData.quantity || 1)).toLocaleString('es-CL')}
+                                ${((Number(formData.price || 0) * Number(formData.quantity || 1)) + formData.additional_costs.reduce((sum, c) => sum + c.amount, 0)).toLocaleString('es-CL')}
                             </span>
                         </div>
                     </div>

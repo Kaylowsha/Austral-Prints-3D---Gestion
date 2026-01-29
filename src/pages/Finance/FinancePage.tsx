@@ -152,8 +152,10 @@ export default function FinancePage() {
         setInventoryValue(currentInventoryValue)
 
         // Separate Operational from Capital
-        // Separación estricta: Solo 'entregado' es Ingreso Real. 'pendiente', 'en_proceso' y 'terminado' (Listo) son Flotantes.
+        // Separación estricta: Solo 'entregado' es Ingreso Real.
         const realized_orders = orders?.filter(o => ['entregado'].includes(o.status)) || []
+        // Costos Directos: Todo lo que no está cancelado se considera consumo de producción
+        const production_cost_orders = orders?.filter(o => o.status !== 'cancelado') || []
         const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status)) || []
 
         // Realized Income: Products + Manual Sales (Anything that is NOT Capital Injection)
@@ -171,11 +173,11 @@ export default function FinancePage() {
 
         const op_expenses = expenses?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
-        // Costo Real de Producción (Material + Energia de lo vendido)
-        const realTotalCost = realized_orders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
+        // Costo Real de Producción (Material + Energia de lo producido/en curso)
+        const realTotalCost = production_cost_orders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
         // Desglose de Costos Directos
-        const material_cost = realized_orders.reduce((acc, curr) => {
+        const material_cost = production_cost_orders.reduce((acc, curr) => {
             // Si tiene el campo técnico guardado, calculamos su parte
             if (curr.quoted_grams && curr.quoted_material_price) {
                 const costPerGram = (curr.quoted_material_price || 15000) / 1000;
@@ -187,8 +189,8 @@ export default function FinancePage() {
 
         const energy_cost = realTotalCost - material_cost
 
-        const total_grams = realized_orders.reduce((acc, curr) => acc + (curr.quoted_grams || 0) * (curr.quantity || 1), 0)
-        const total_hours = realized_orders.reduce((acc, curr) => {
+        const total_grams = production_cost_orders.reduce((acc, curr) => acc + (curr.quoted_grams || 0) * (curr.quantity || 1), 0)
+        const total_hours = production_cost_orders.reduce((acc, curr) => {
             const h = curr.quoted_hours || 0
             const m = curr.quoted_mins || 0
             return acc + (h + m / 60) * (curr.quantity || 1)
@@ -251,13 +253,13 @@ export default function FinancePage() {
         let accCosto = 0
 
         const historyData = timeline.map(date => {
-            const dayOpIncome = orders?.filter(o => (o.date || o.created_at).startsWith(date) && (o.product_id || o.description !== 'Inyección de Capital'))
+            const dayOpIncome = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado' && (o.product_id || o.description !== 'Inyección de Capital'))
                 .reduce((acc, curr) => acc + ((curr.price || 0) * (curr.quantity || 1)), 0) || 0
             const dayOpExpense = expenses?.filter(e => !['retiro', 'inversion'].includes(e.category) && e.date === date)
                 .reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
-            const dayProdCost = orders?.filter(o => (o.date || o.created_at).startsWith(date))
+            const dayProdCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status !== 'cancelado')
                 .reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
-            const dayMaterialCost = orders?.filter(o => (o.date || o.created_at).startsWith(date))
+            const dayMaterialCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status !== 'cancelado')
                 .reduce((acc, curr) => {
                     if (curr.quoted_grams && curr.quoted_material_price) {
                         return acc + ((curr.quoted_grams * (curr.quoted_material_price / 1000)) * (curr.quantity || 1))
@@ -272,7 +274,7 @@ export default function FinancePage() {
             const dayWithdrawals = expenses?.filter(e => e.category === 'retiro' && e.date === date)
                 .reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
-            const dayOpSuggested = orders?.filter(o => (o.date || o.created_at).startsWith(date) && (o.product_id || o.description !== 'Inyección de Capital'))
+            const dayOpSuggested = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado' && (o.product_id || o.description !== 'Inyección de Capital'))
                 .reduce((acc, curr) => acc + ((curr.suggested_price || curr.price || 0) * (curr.quantity || 1)), 0) || 0
 
             const dayNet = dayOpIncome - dayOpExpense - dayProdCost + dayInjections - dayWithdrawals

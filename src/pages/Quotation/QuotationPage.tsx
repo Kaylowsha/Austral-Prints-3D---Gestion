@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { calculateQuotation, type QuotationParams } from '@/lib/quotation';
 import { toast } from 'sonner';
 import TagSelector from '@/components/TagSelector';
+import AdditionalCostsInput, { type AdditionalCost } from '@/components/AdditionalCostsInput';
 
 import {
     Dialog,
@@ -97,7 +98,8 @@ const QuotationPage = () => {
         finalPrice: 0,
         customClientName: '',
         useCustomClient: true,
-        tags: [] as string[]
+        tags: [] as string[],
+        additional_costs: [] as AdditionalCost[]
     });
 
     const fetchInventory = async () => {
@@ -141,12 +143,15 @@ const QuotationPage = () => {
                 }
             }
 
+            // Add additional costs to the final price
+            const additionalCostsTotal = orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0);
+
             setOrderData(prev => ({
                 ...prev,
-                finalPrice: priceToUse
+                finalPrice: priceToUse + additionalCostsTotal
             }));
         }
-    }, [isConverting, results.finalPrice, quotationMode, selectedProductId, products]);
+    }, [isConverting, results.finalPrice, quotationMode, selectedProductId, products, orderData.additional_costs]);
 
     const getMaterialPower = (type: string) => {
         switch (type?.toUpperCase()) {
@@ -217,7 +222,8 @@ const QuotationPage = () => {
                 quoted_op_multiplier: config.operationalMultiplier,
                 quoted_sales_multiplier: config.salesMultiplier,
                 quoted_material_price: selectedMaterial?.price_per_kg || 15000,
-                tags: orderData.tags
+                tags: orderData.tags,
+                additional_costs: orderData.additional_costs
             }]);
 
             if (error) throw error;
@@ -226,7 +232,7 @@ const QuotationPage = () => {
             setIsConverting(false);
             toast.success('¡Pedido creado con éxito!');
             setIsConverting(false);
-            setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true, tags: [] });
+            setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true, tags: [], additional_costs: [] });
             setQuantity(1);
         } catch (err: any) {
             toast.error('Error al crear pedido', { description: err.message });
@@ -471,6 +477,17 @@ const QuotationPage = () => {
                                 <span className="text-slate-500 text-sm italic">Costo Total (x1.5)</span>
                                 <span className="font-bold text-xl text-indigo-400 tabular-nums">${results.totalOperationalCost.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
                             </div>
+                            {orderData.additional_costs.length > 0 && (
+                                <div className="pt-4 border-t border-slate-700">
+                                    <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Costos Adicionales</div>
+                                    {orderData.additional_costs.map((cost, idx) => (
+                                        <div key={idx} className="flex justify-between items-center text-sm mb-1">
+                                            <span className="text-slate-400">{cost.description}</span>
+                                            <span className="text-slate-300 font-semibold">${cost.amount.toLocaleString('es-CL')}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="pt-4">
                                 <button
                                     onClick={() => setIsConverting(true)}
@@ -524,6 +541,34 @@ const QuotationPage = () => {
                                 selectedTags={orderData.tags}
                                 onChange={(tags) => setOrderData({ ...orderData, tags })}
                             />
+                        </div>
+                        <div className="grid gap-2">
+                            <AdditionalCostsInput
+                                costs={orderData.additional_costs}
+                                onChange={(costs) => setOrderData({ ...orderData, additional_costs: costs })}
+                            />
+                        </div>
+                        <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-slate-600">Precio Sugerido</span>
+                                    <span className="font-bold text-slate-700">${results.finalPrice.toLocaleString('es-CL')}</span>
+                                </div>
+                                {orderData.additional_costs.length > 0 && (
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-slate-600">Costos Adicionales</span>
+                                        <span className="font-bold text-slate-700">
+                                            ${orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0).toLocaleString('es-CL')}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center pt-2 border-t border-indigo-200">
+                                    <span className="font-bold text-indigo-700">Total Final</span>
+                                    <span className="text-xl font-black text-indigo-700">
+                                        ${(results.finalPrice + orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0)).toLocaleString('es-CL')}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>

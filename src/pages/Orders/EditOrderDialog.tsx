@@ -23,6 +23,7 @@ import { toast } from 'sonner'
 import { Pencil, Calculator } from 'lucide-react'
 import { calculateQuotation, type QuotationParams } from '@/lib/quotation'
 import TagSelector from '@/components/TagSelector'
+import AdditionalCostsInput, { type AdditionalCost } from '@/components/AdditionalCostsInput'
 
 interface EditOrderDialogProps {
     order: any
@@ -54,7 +55,8 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
         opMult: order.quoted_op_multiplier || 1.5,
         salesMult: order.quoted_sales_multiplier || 3.0,
         matPrice: order.quoted_material_price || 15000,
-        tags: order.tags || [] as string[]
+        tags: order.tags || [] as string[],
+        additional_costs: (order.additional_costs || []) as AdditionalCost[]
     })
 
     useEffect(() => {
@@ -124,7 +126,8 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                     quoted_op_multiplier: Number(formData.opMult),
                     quoted_sales_multiplier: Number(formData.salesMult),
                     quoted_material_price: Number(formData.matPrice),
-                    tags: formData.tags
+                    tags: formData.tags,
+                    additional_costs: formData.additional_costs
                 })
                 .eq('id', order.id)
 
@@ -275,6 +278,22 @@ export default function EditOrderDialog({ order, onSuccess }: EditOrderDialogPro
                         <div className="grid gap-2">
                             <Label>Fecha Entrega</Label>
                             <Input type="date" value={formData.deadline} onChange={e => setFormData({ ...formData, deadline: e.target.value })} />
+                        </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <AdditionalCostsInput
+                            costs={formData.additional_costs}
+                            onChange={(costs) => setFormData({ ...formData, additional_costs: costs })}
+                        />
+                    </div>
+
+                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm font-bold text-indigo-600">Total con Adicionales</span>
+                            <span className="text-2xl font-black text-indigo-700">
+                                ${((Number(formData.price) * Number(formData.quantity)) + formData.additional_costs.reduce((sum, c) => sum + c.amount, 0)).toLocaleString('es-CL')}
+                            </span>
                         </div>
                     </div>
 
