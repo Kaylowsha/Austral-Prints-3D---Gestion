@@ -34,6 +34,7 @@ interface Product {
     weight_grams: number;
     print_time_mins: number;
     base_price: number;
+    additional_costs?: AdditionalCost[];
 }
 
 interface CostConfig {
@@ -191,7 +192,11 @@ const QuotationPage = () => {
                 printTimeHours: Math.floor((product.print_time_mins || 0) / 60),
                 printTimeMinutes: (product.print_time_mins || 0) % 60
             });
-            setOrderData(prev => ({ ...prev, description: product.name }));
+            setOrderData(prev => ({
+                ...prev,
+                description: product.name,
+                additional_costs: product.additional_costs || []
+            }));
         }
     };
 

@@ -14,6 +14,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
+import AdditionalCostsInput, { type AdditionalCost } from '@/components/AdditionalCostsInput'
 
 interface ProductFormProps {
     onSuccess: () => void
@@ -28,7 +29,8 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
         name: '',
         base_price: '',
         weight_grams: '',
-        print_time_mins: ''
+        print_time_mins: '',
+        additional_costs: [] as AdditionalCost[]
     })
 
     useEffect(() => {
@@ -37,7 +39,8 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
                 name: product.name || '',
                 base_price: product.base_price?.toString() || '',
                 weight_grams: product.weight_grams?.toString() || '',
-                print_time_mins: product.print_time_mins?.toString() || ''
+                print_time_mins: product.print_time_mins?.toString() || '',
+                additional_costs: product.additional_costs || []
             })
         }
     }, [product, open])
@@ -50,7 +53,8 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
             name: data.name,
             base_price: Number(data.base_price) || 0,
             weight_grams: Number(data.weight_grams) || 0,
-            print_time_mins: Number(data.print_time_mins) || 0
+            print_time_mins: Number(data.print_time_mins) || 0,
+            additional_costs: data.additional_costs
         }
 
         try {
@@ -73,7 +77,7 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
             toast.success(product ? 'Producto actualizado' : 'Producto creado')
             setOpen(false)
             if (!product) {
-                setData({ name: '', base_price: '', weight_grams: '', print_time_mins: '' })
+                setData({ name: '', base_price: '', weight_grams: '', print_time_mins: '', additional_costs: [] })
             }
             onSuccess()
         } catch (error: any) {
@@ -93,7 +97,7 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>{product ? 'Editar Producto' : 'Nuevo Producto'}</DialogTitle>
                     <DialogDescription>
@@ -153,6 +157,18 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
                             placeholder="Ej: 120"
                         />
                     </div>
+
+                    <div className="col-span-4 border-t pt-4">
+                        <Label className="mb-2 block font-bold text-slate-700">Costos Adicionales Predeterminados</Label>
+                        <AdditionalCostsInput
+                            costs={data.additional_costs}
+                            onChange={(costs) => setData({ ...data, additional_costs: costs })}
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                            Estos costos se cargarán automáticamente al crear un pedido con este producto.
+                        </p>
+                    </div>
+
                     <DialogFooter>
                         <Button type="submit" disabled={loading}>
                             {loading ? 'Guardando...' : product ? 'Actualizar' : 'Guardar Producto'}

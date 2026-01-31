@@ -85,7 +85,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                 ...formData,
                 product_id: productId,
                 description: product.name,
-                price: product.base_price.toString()
+                price: product.base_price.toString(),
+                additional_costs: product.additional_costs || []
             })
         }
     }
