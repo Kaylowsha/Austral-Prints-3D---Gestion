@@ -34,7 +34,7 @@ export default function KanbanBoard() {
             .from('orders')
             .select(`
         *,
-        products (name),
+        products (name, weight_grams),
         clients (full_name)
       `)
             .neq('status', 'cancelado') // Don't show cancelled for now
@@ -50,6 +50,15 @@ export default function KanbanBoard() {
         return orders
             .filter(o => o.status === status)
             .reduce((sum, order) => sum + calculateOrderTotal(order), 0)
+    }
+
+    const getColumnGrams = (status: string) => {
+        return orders
+            .filter(o => o.status === status)
+            .reduce((sum, order) => {
+                const weight = order.quoted_grams || order.products?.weight_grams || 0
+                return sum + (weight * (order.quantity || 1))
+            }, 0)
     }
 
     const deductInventory = async (order: any) => {
@@ -188,7 +197,7 @@ export default function KanbanBoard() {
                                 <div className="flex flex-col">
                                     <span>{col.label}</span>
                                     <span className="text-[10px] opacity-80 font-normal">
-                                        ${getColumnTotal(col.id).toLocaleString()}
+                                        ${getColumnTotal(col.id).toLocaleString()} • {getColumnGrams(col.id).toLocaleString()}g
                                     </span>
                                 </div>
                                 <span className="bg-white/50 px-2 py-0.5 rounded-full text-xs font-bold">
@@ -228,7 +237,7 @@ export default function KanbanBoard() {
                                 <div className="flex flex-col">
                                     <span>{col.label}</span>
                                     <span className="text-[10px] opacity-80 font-normal">
-                                        ${getColumnTotal(col.id).toLocaleString()}
+                                        ${getColumnTotal(col.id).toLocaleString()} • {getColumnGrams(col.id).toLocaleString()}g
                                     </span>
                                 </div>
                                 <span className="bg-white/50 px-2 py-0.5 rounded-full text-xs font-bold">
