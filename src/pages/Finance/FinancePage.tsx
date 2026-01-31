@@ -50,7 +50,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssetsTab } from './AssetsTab'
 import TagManagerDialog from './TagManagerDialog'
-import { calculateOrderTotal } from '@/lib/orderUtils'
+import { calculateOrderTotal, getAdditionalCostsTotal } from '@/lib/orderUtils'
 
 export default function FinancePage() {
     const [, setLoading] = useState(true)
@@ -166,7 +166,7 @@ export default function FinancePage() {
 
         const suggested_income = realized_orders
             .filter(o => o.product_id || o.description !== 'Inyección de Capital')
-            .reduce((acc, curr) => acc + ((curr.suggested_price || curr.price || 0) * (curr.quantity || 1)), 0) || 0
+            .reduce((acc, curr) => acc + ((curr.suggested_price || curr.price || 0) * (curr.quantity || 1)) + getAdditionalCostsTotal(curr), 0) || 0
 
         // Floating: ALL pending orders are potential revenue (regardless of having a product_id or not)
         const floating = pending_orders
