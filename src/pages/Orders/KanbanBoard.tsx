@@ -9,6 +9,7 @@ import EditOrderDialog from './EditOrderDialog'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { XCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { calculateOrderTotal } from '@/lib/orderUtils'
 
 // Define columns
 const COLUMNS = [
@@ -43,6 +44,12 @@ export default function KanbanBoard() {
             setOrders(data)
         }
         if (!silent) setLoading(false)
+    }
+
+    const getColumnTotal = (status: string) => {
+        return orders
+            .filter(o => o.status === status)
+            .reduce((sum, order) => sum + calculateOrderTotal(order), 0)
     }
 
     const deductInventory = async (order: any) => {
@@ -178,8 +185,13 @@ export default function KanbanBoard() {
                     {COLUMNS.map(col => (
                         <div key={col.id} className="flex-1 min-w-[250px] bg-slate-100/50 rounded-xl p-3 border border-slate-200 flex flex-col max-h-[70vh]">
                             <div className={`mb-3 px-3 py-2 rounded-lg font-semibold text-sm ${col.color} flex justify-between items-center`}>
-                                {col.label}
-                                <span className="bg-white/50 px-2 rounded-full text-xs">
+                                <div className="flex flex-col">
+                                    <span>{col.label}</span>
+                                    <span className="text-[10px] opacity-80 font-normal">
+                                        ${getColumnTotal(col.id).toLocaleString()}
+                                    </span>
+                                </div>
+                                <span className="bg-white/50 px-2 py-0.5 rounded-full text-xs font-bold">
                                     {orders.filter(o => o.status === col.id).length}
                                 </span>
                             </div>
@@ -213,8 +225,13 @@ export default function KanbanBoard() {
                     {COLUMNS.map(col => (
                         <TabsContent key={col.id} value={col.id} className="flex-1 overflow-y-auto min-h-0 pb-20">
                             <div className={`mb-3 px-3 py-2 rounded-lg font-semibold text-sm ${col.color} flex justify-between items-center sticky top-0 z-10 shadow-sm mx-1`}>
-                                {col.label}
-                                <span className="bg-white/50 px-2 rounded-full text-xs">
+                                <div className="flex flex-col">
+                                    <span>{col.label}</span>
+                                    <span className="text-[10px] opacity-80 font-normal">
+                                        ${getColumnTotal(col.id).toLocaleString()}
+                                    </span>
+                                </div>
+                                <span className="bg-white/50 px-2 py-0.5 rounded-full text-xs font-bold">
                                     {orders.filter(o => o.status === col.id).length}
                                 </span>
                             </div>
@@ -273,7 +290,9 @@ function OrdersList({ orders, isUpdating, updateStatus, colId, fetchOrders }: an
                                     <span className="text-red-500 font-medium">Entrega: {new Date(order.deadline).toLocaleDateString()}</span>
                                 )}
                             </div>
-                            <span className="font-mono text-slate-600 font-bold">${((order.price || 0) * (order.quantity || 1)).toLocaleString() || 0}</span>
+                            <span className="font-mono text-slate-600 font-bold">
+                                ${calculateOrderTotal(order).toLocaleString()}
+                            </span>
                         </div>
 
                         {/* Action Buttons */}
