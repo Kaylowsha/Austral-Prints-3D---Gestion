@@ -460,13 +460,14 @@ export default function FinancePage() {
                     </div>
 
                     <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-2 text-indigo-600 hover:bg-indigo-50 font-bold text-xs uppercase tracking-widest"
+                        variant="outline"
+                        className="h-32 w-32 flex flex-col gap-3 bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm transition-all"
                         onClick={handleExportCSV}
                     >
-                        <Download size={16} />
-                        Exportar CSV
+                        <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                            <Download size={24} />
+                        </div>
+                        <span className="font-semibold text-xs text-center uppercase tracking-tight">Exportar<br />CSV</span>
                     </Button>
 
                     <IncomeDialog onSuccess={fetchDetailedStats} />
