@@ -228,20 +228,18 @@ export default function KanbanBoard() {
 
     return (
         <div className="h-full flex flex-col p-4 md:p-6 bg-slate-50 min-h-screen">
-            <header className="mb-6 flex justify-between items-start">
+            <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Tablero de Pedidos</h1>
-                    <p className="text-slate-500 text-sm">Gestiona el flujo de trabajo</p>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Centro de Gestión de Pedidos</h1>
+                    <p className="text-slate-500 text-sm font-medium">Control de flujo y exportación de ventas</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
                     <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-bold text-xs uppercase tracking-widest bg-white shadow-sm h-10"
                         onClick={handleExportCSV}
+                        className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md h-10 px-4 transition-all hover:scale-105"
                     >
-                        <Download size={16} />
-                        Exportar CSV
+                        <Download size={20} />
+                        EXPORTAR LISTADO (CSV)
                     </Button>
                     <OrderDialog onSuccess={fetchOrders} />
                 </div>
