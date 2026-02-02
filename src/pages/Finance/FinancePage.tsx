@@ -7,8 +7,6 @@ import {
     User, Tag, Package, X, Download
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import IncomeDialog from './IncomeDialog'
-import ExpenseDialog from './ExpenseDialog'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -115,7 +113,7 @@ export default function FinancePage() {
         total_grams: 0,
         total_hours: 0
     })
-    const [timeframe, setTimeframe] = useState<'7d' | '30d' | 'month' | 'all'>('30d')
+    const [timeframe] = useState<'7d' | '30d' | 'month' | 'all'>('30d')
     const [categoryData, setCategoryData] = useState<any[]>([])
     const [dailyData, setDailyData] = useState<any[]>([])
     const [cumulativeData, setCumulativeData] = useState<any[]>([])
