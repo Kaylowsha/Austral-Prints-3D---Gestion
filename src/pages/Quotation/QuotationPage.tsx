@@ -73,7 +73,7 @@ const QuotationPage = () => {
     const [quotationMode, setQuotationMode] = useState<'custom' | 'product'>('custom');
     const [selectedProductId, setSelectedProductId] = useState<string>('');
     const [searchProduct, setSearchProduct] = useState('');
-    const [quantity, setQuantity] = useState(1);
+    const [quantity, setQuantity] = useState(0);
 
     const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
     const [project, setProject] = useState<ProjectData>({
@@ -238,7 +238,7 @@ const QuotationPage = () => {
             toast.success('¡Pedido creado con éxito!');
             setIsConverting(false);
             setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true, tags: [], additional_costs: [] });
-            setQuantity(1);
+            setQuantity(0);
         } catch (err: any) {
             toast.error('Error al crear pedido', { description: err.message });
         }
@@ -302,9 +302,10 @@ const QuotationPage = () => {
                     <span className="text-sm font-bold text-slate-500">Cantidad:</span>
                     <input
                         type="number"
-                        min="1"
-                        value={quantity}
-                        onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
+                        min="0"
+                        value={quantity === 0 ? '' : quantity}
+                        placeholder="0"
+                        onChange={(e) => setQuantity(Number(e.target.value))}
                         className="w-16 text-center font-bold text-slate-900 outline-none border-b border-transparent focus:border-indigo-500"
                     />
                 </div>
