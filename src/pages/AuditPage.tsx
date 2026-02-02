@@ -7,10 +7,6 @@ export default function AuditPage() {
     const [logs, setLogs] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
-        fetchLogs()
-    }, [])
-
     const fetchLogs = async () => {
         const { data, error } = await supabase
             .from('audit_logs')
@@ -25,6 +21,10 @@ export default function AuditPage() {
         }
         setLoading(false)
     }
+
+    useEffect(() => {
+        fetchLogs()
+    }, [])
 
     return (
         <div className="p-4 md:p-8 space-y-8 max-w-4xl mx-auto pb-24 bg-slate-50/50 min-h-screen">

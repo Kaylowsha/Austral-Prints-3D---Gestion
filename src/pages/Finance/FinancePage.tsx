@@ -93,7 +93,7 @@ export default function FinancePage() {
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
-        } catch (error) {
+        } catch {
             toast.error('Error al exportar CSV')
         }
     }
