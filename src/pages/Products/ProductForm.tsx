@@ -104,61 +104,59 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
                         {product ? 'Actualiza los detalles de este producto.' : 'Agrega un nuevo modelo a tu catálogo de impresiones.'}
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">
+                <form onSubmit={handleSubmit} className="grid gap-6 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="name">
                             Nombre
                         </Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData({ ...data, name: e.target.value })}
-                            className="col-span-3"
                             placeholder="Ej: Soporte Audífonos"
                             required
                         />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="price" className="text-right">
-                            Precio Base
-                        </Label>
-                        <Input
-                            id="price"
-                            type="number"
-                            value={data.base_price}
-                            onChange={(e) => setData({ ...data, base_price: e.target.value })}
-                            className="col-span-3"
-                            placeholder="5000"
-                        />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="weight" className="text-right">
-                            Peso (g)
-                        </Label>
-                        <Input
-                            id="weight"
-                            type="number"
-                            value={data.weight_grams}
-                            onChange={(e) => setData({ ...data, weight_grams: e.target.value })}
-                            className="col-span-3"
-                            placeholder="Ej: 45"
-                        />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="time" className="text-right">
-                            Tiempo (min)
-                        </Label>
-                        <Input
-                            id="time"
-                            type="number"
-                            value={data.print_time_mins}
-                            onChange={(e) => setData({ ...data, print_time_mins: e.target.value })}
-                            className="col-span-3"
-                            placeholder="Ej: 120"
-                        />
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="price">
+                                Precio Base
+                            </Label>
+                            <Input
+                                id="price"
+                                type="number"
+                                value={data.base_price}
+                                onChange={(e) => setData({ ...data, base_price: e.target.value })}
+                                placeholder="5000"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="weight">
+                                Peso (g)
+                            </Label>
+                            <Input
+                                id="weight"
+                                type="number"
+                                value={data.weight_grams}
+                                onChange={(e) => setData({ ...data, weight_grams: e.target.value })}
+                                placeholder="Ej: 45"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="time">
+                                Tiempo (min)
+                            </Label>
+                            <Input
+                                id="time"
+                                type="number"
+                                value={data.print_time_mins}
+                                onChange={(e) => setData({ ...data, print_time_mins: e.target.value })}
+                                placeholder="Ej: 120"
+                            />
+                        </div>
                     </div>
 
-                    <div className="col-span-4 border-t pt-4">
+                    <div className="border-t pt-4">
                         <Label className="mb-2 block font-bold text-slate-700">Costos Adicionales Predeterminados</Label>
                         <AdditionalCostsInput
                             costs={data.additional_costs}
