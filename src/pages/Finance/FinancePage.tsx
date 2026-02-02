@@ -7,6 +7,8 @@ import {
     User, Tag, Package, X, Download
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import IncomeDialog from './IncomeDialog'
+import ExpenseDialog from './ExpenseDialog'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -113,7 +115,7 @@ export default function FinancePage() {
         total_grams: 0,
         total_hours: 0
     })
-    const [timeframe] = useState<'7d' | '30d' | 'month' | 'all'>('30d')
+    const [timeframe, setTimeframe] = useState<'7d' | '30d' | 'month' | 'all'>('30d')
     const [categoryData, setCategoryData] = useState<any[]>([])
     const [dailyData, setDailyData] = useState<any[]>([])
     const [cumulativeData, setCumulativeData] = useState<any[]>([])
@@ -434,76 +436,102 @@ export default function FinancePage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                    {/* Timeframe Selector */}
+                    <div className="flex bg-slate-200/50 p-1 rounded-xl gap-1 mr-2">
+                        {[
+                            { id: '7d', label: '7D' },
+                            { id: '30d', label: '30D' },
+                            { id: 'month', label: 'MES' },
+                            { id: 'all', label: 'TODO' }
+                        ].map((t) => (
+                            <button
+                                key={t.id}
+                                onClick={() => setTimeframe(t.id as any)}
+                                className={cn(
+                                    "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
+                                    timeframe === t.id
+                                        ? "bg-white text-indigo-600 shadow-sm"
+                                        : "text-slate-500 hover:text-slate-700"
+                                )}
+                            >
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+
                     <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                        className="gap-2 text-indigo-600 hover:bg-indigo-50 font-bold text-xs uppercase tracking-widest"
                         onClick={handleExportCSV}
                     >
                         <Download size={16} />
                         Exportar CSV
                     </Button>
 
-
-                    {/* Filtros Avanzados */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-2 text-slate-400 mr-2 border-r pr-4">
-                            <Filter size={18} />
-                            <span className="text-xs font-bold uppercase tracking-widest">Filtros</span>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5 min-w-[200px]">
-                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Cliente</Label>
-                            <Select value={selectedClient} onValueChange={setSelectedClient}>
-                                <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold">
-                                    <div className="flex items-center gap-2">
-                                        <User size={14} className="text-indigo-500" />
-                                        <SelectValue placeholder="Todos los clientes" />
-                                    </div>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos los clientes</SelectItem>
-                                    {clients.map(c => (
-                                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5 min-w-[200px] relative">
-                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Etiqueta (Criterio)</Label>
-                            <div className="flex items-center gap-2">
-                                <Select value={selectedTag} onValueChange={setSelectedTag}>
-                                    <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <Tag size={14} className="text-indigo-500" />
-                                            <SelectValue placeholder="Todas las etiquetas" />
-                                        </div>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas las etiquetas</SelectItem>
-                                        {availableTags.map(tag => (
-                                            <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <TagManagerDialog onSuccess={fetchDetailedStats} />
-                            </div>
-                        </div>
-
-                        {(selectedClient !== 'all' || selectedTag !== 'all') && (
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => { setSelectedClient('all'); setSelectedTag('all'); }}
-                                className="mt-5 h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-bold text-xs gap-2"
-                            >
-                                <X size={14} /> Limpiar
-                            </Button>
-                        )}
-                    </div>
+                    <IncomeDialog onSuccess={fetchDetailedStats} />
+                    <ExpenseDialog onSuccess={fetchDetailedStats} />
                 </div>
             </header>
+
+
+            {/* Filtros Avanzados */}
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2 text-slate-400 mr-2 border-r pr-4">
+                    <Filter size={18} />
+                    <span className="text-xs font-bold uppercase tracking-widest">Filtros</span>
+                </div>
+
+                <div className="flex flex-col gap-1.5 min-w-[200px]">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Cliente</Label>
+                    <Select value={selectedClient} onValueChange={setSelectedClient}>
+                        <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold">
+                            <div className="flex items-center gap-2">
+                                <User size={14} className="text-indigo-500" />
+                                <SelectValue placeholder="Todos los clientes" />
+                            </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los clientes</SelectItem>
+                            {clients.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                <div className="flex flex-col gap-1.5 min-w-[200px] relative">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Etiqueta (Criterio)</Label>
+                    <div className="flex items-center gap-2">
+                        <Select value={selectedTag} onValueChange={setSelectedTag}>
+                            <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold flex-1">
+                                <div className="flex items-center gap-2">
+                                    <Tag size={14} className="text-indigo-500" />
+                                    <SelectValue placeholder="Todas las etiquetas" />
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las etiquetas</SelectItem>
+                                {availableTags.map(tag => (
+                                    <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <TagManagerDialog onSuccess={fetchDetailedStats} />
+                    </div>
+                </div>
+
+                {(selectedClient !== 'all' || selectedTag !== 'all') && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => { setSelectedClient('all'); setSelectedTag('all'); }}
+                        className="mt-5 h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-bold text-xs gap-2"
+                    >
+                        <X size={14} /> Limpiar
+                    </Button>
+                )}
+            </div>
 
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-white border text-slate-500">
