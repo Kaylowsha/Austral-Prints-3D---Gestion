@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Loader2, ArrowRight, ArrowLeft, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import OrderDialog from './OrderDialog'
 import EditOrderDialog from './EditOrderDialog'
@@ -23,6 +23,54 @@ export default function KanbanBoard() {
     const [orders, setOrders] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({})
+
+    const handleExportCSV = async () => {
+        try {
+            const { data: orders } = await supabase
+                .from('orders')
+                .select('*, clients(full_name)')
+                .eq('status', 'entregado')
+                .order('date', { ascending: false })
+
+            if (!orders) return toast.error('No hay pedidos para exportar')
+
+            const headers = ['ID', 'Fecha', 'Cliente', 'Descripción', 'Estado', 'Monto Venta', 'Costo Directo', 'Margen Estimado', 'Etiquetas']
+            const csvRows = [headers.join(',')]
+
+            orders.forEach(order => {
+                const clientName = order.custom_client_name || order.clients?.full_name || 'Cliente General'
+                const cost = order.cost || 0
+                const margin = order.price - cost
+                const tags = order.tags ? order.tags.join(';') : ''
+
+                const row = [
+                    order.id.slice(0, 8),
+                    order.date || order.created_at.split('T')[0],
+                    `"${clientName.replace(/"/g, '""')}"`,
+                    `"${(order.description || '').replace(/"/g, '""')}"`,
+                    'Pagado',
+                    order.price,
+                    cost,
+                    margin,
+                    `"${tags}"`
+                ]
+                csvRows.push(row.join(','))
+            })
+
+            const csvString = csvRows.join('\n')
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.setAttribute('href', url)
+            link.setAttribute('download', `reporte_ventas_${new Date().toISOString().split('T')[0]}.csv`)
+            link.style.visibility = 'hidden'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        } catch {
+            toast.error('Error al exportar CSV')
+        }
+    }
 
     useEffect(() => {
         fetchOrders()
@@ -185,7 +233,18 @@ export default function KanbanBoard() {
                     <h1 className="text-2xl font-bold text-slate-900">Tablero de Pedidos</h1>
                     <p className="text-slate-500 text-sm">Gestiona el flujo de trabajo</p>
                 </div>
-                <OrderDialog onSuccess={fetchOrders} />
+                <div className="flex gap-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 font-bold text-xs uppercase tracking-widest bg-white shadow-sm h-10"
+                        onClick={handleExportCSV}
+                    >
+                        <Download size={16} />
+                        Exportar CSV
+                    </Button>
+                    <OrderDialog onSuccess={fetchOrders} />
+                </div>
             </header>
 
             {/* Desktop Kanban Grid */}

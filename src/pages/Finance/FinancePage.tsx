@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import {
     ArrowUpRight, ArrowDownRight, ShoppingBag, DollarSign, TrendingUp, Zap,
     LineChart as LineChartIcon, PieChart as PieChartIcon, BarChart3, Filter,
-    User, Tag, Package, X, Download
+    User, Tag, Package, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import IncomeDialog from './IncomeDialog'
@@ -50,53 +50,6 @@ function MetricCard({ title, value, trend, icon, subValue, highlight = false }: 
 }
 
 export default function FinancePage() {
-    const handleExportCSV = async () => {
-        try {
-            const { data: orders } = await supabase
-                .from('orders')
-                .select('*, clients(full_name)')
-                .eq('status', 'entregado')
-                .order('date', { ascending: false })
-
-            if (!orders) return toast.error('No hay pedidos para exportar')
-
-            const headers = ['ID', 'Fecha', 'Cliente', 'Descripción', 'Estado', 'Monto Venta', 'Costo Directo', 'Margen Estimado', 'Etiquetas']
-            const csvRows = [headers.join(',')]
-
-            orders.forEach(order => {
-                const clientName = order.custom_client_name || order.clients?.full_name || 'Cliente General'
-                const cost = order.cost || 0
-                const margin = order.price - cost
-                const tags = order.tags ? order.tags.join(';') : ''
-
-                const row = [
-                    order.id.slice(0, 8),
-                    order.date,
-                    `"${clientName.replace(/"/g, '""')}"`,
-                    `"${(order.description || '').replace(/"/g, '""')}"`,
-                    'Pagado',
-                    order.price,
-                    cost,
-                    margin,
-                    `"${tags}"`
-                ]
-                csvRows.push(row.join(','))
-            })
-
-            const csvString = csvRows.join('\n')
-            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
-            const url = URL.createObjectURL(blob)
-            const link = document.createElement('a')
-            link.setAttribute('href', url)
-            link.setAttribute('download', `reporte_ventas_${new Date().toISOString().split('T')[0]}.csv`)
-            link.style.visibility = 'hidden'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-        } catch {
-            toast.error('Error al exportar CSV')
-        }
-    }
     const [, setLoading] = useState(true)
     const [stats, setStats] = useState({
         income: 0,
@@ -459,22 +412,10 @@ export default function FinancePage() {
                         ))}
                     </div>
 
-                    <Button
-                        variant="outline"
-                        className="h-32 w-32 flex flex-col gap-3 bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 shadow-sm transition-all"
-                        onClick={handleExportCSV}
-                    >
-                        <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                            <Download size={24} />
-                        </div>
-                        <span className="font-semibold text-xs text-center uppercase tracking-tight">Exportar<br />CSV</span>
-                    </Button>
-
                     <IncomeDialog onSuccess={fetchDetailedStats} />
                     <ExpenseDialog onSuccess={fetchDetailedStats} />
                 </div>
             </header>
-
 
             {/* Filtros Avanzados */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-4">
@@ -522,17 +463,19 @@ export default function FinancePage() {
                     </div>
                 </div>
 
-                {(selectedClient !== 'all' || selectedTag !== 'all') && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => { setSelectedClient('all'); setSelectedTag('all'); }}
-                        className="mt-5 h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-bold text-xs gap-2"
-                    >
-                        <X size={14} /> Limpiar
-                    </Button>
-                )}
-            </div>
+                {
+                    (selectedClient !== 'all' || selectedTag !== 'all') && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => { setSelectedClient('all'); setSelectedTag('all'); }}
+                            className="mt-5 h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-bold text-xs gap-2"
+                        >
+                            <X size={14} /> Limpiar
+                        </Button>
+                    )
+                }
+            </div >
 
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-white border text-slate-500">
@@ -988,6 +931,6 @@ export default function FinancePage() {
                     <AssetsTab cashBalance={stats.balance} inventoryValue={inventoryValue} />
                 </TabsContent>
             </Tabs>
-        </div>
+        </div >
     )
 }
