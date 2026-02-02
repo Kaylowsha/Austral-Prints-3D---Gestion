@@ -2,20 +2,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import {
-    ArrowUpRight,
-    ArrowDownRight,
-    ShoppingBag,
-    DollarSign,
-    TrendingUp,
-    Zap,
-    LineChart as LineChartIcon,
-    PieChart as PieChartIcon,
-    BarChart3,
-    Filter,
-    User,
-    Tag,
-    Package,
-    X
+    ArrowUpRight, ArrowDownRight, ShoppingBag, DollarSign, TrendingUp, Zap,
+    LineChart as LineChartIcon, PieChart as PieChartIcon, BarChart3, Filter,
+    User, Tag, Package, X, Download
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import IncomeDialog from './IncomeDialog'
@@ -23,36 +12,91 @@ import ExpenseDialog from './ExpenseDialog'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
-import {
-    BarChart,
-    Bar,
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-    Cell,
-    PieChart,
-    Pie,
-    AreaChart,
-    Area
+    BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+    ResponsiveContainer, Cell, PieChart, Pie, AreaChart, Area
 } from 'recharts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AssetsTab } from './AssetsTab'
 import TagManagerDialog from './TagManagerDialog'
 import { calculateOrderTotal, getAdditionalCostsTotal } from '@/lib/orderUtils'
 
+
+function MetricCard({ title, value, trend, icon, subValue, highlight = false }: any) {
+    return (
+        <Card className={`border-none shadow-sm ${highlight ? 'bg-indigo-600 text-white' : 'bg-white'}`}>
+            <CardContent className="p-5">
+                <div className="flex justify-between items-start mb-4">
+                    <div className={`p-2 rounded-xl ${highlight ? 'bg-white/20' : 'bg-slate-50'}`}>
+                        {icon}
+                    </div>
+                    {trend && (
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${highlight ? 'bg-white/20' : 'bg-green-50 text-green-600'}`}>
+                            {trend}
+                        </span>
+                    )}
+                </div>
+                <div>
+                    <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${highlight ? 'text-indigo-100' : 'text-slate-400'}`}>
+                        {title}
+                    </p>
+                    <h4 className="text-2xl font-black mb-1">{value}</h4>
+                    <p className={`text-[10px] ${highlight ? 'text-indigo-200' : 'text-slate-500'}`}>{subValue}</p>
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
 export default function FinancePage() {
+    const handleExportCSV = async () => {
+        try {
+            const { data: orders } = await supabase
+                .from('orders')
+                .select('*, clients(full_name)')
+                .eq('status', 'entregado')
+                .order('date', { ascending: false })
+
+            if (!orders) return toast.error('No hay pedidos para exportar')
+
+            const headers = ['ID', 'Fecha', 'Cliente', 'Descripción', 'Estado', 'Monto Venta', 'Costo Directo', 'Margen Estimado', 'Etiquetas']
+            const csvRows = [headers.join(',')]
+
+            orders.forEach(order => {
+                const clientName = order.custom_client_name || order.clients?.full_name || 'Cliente General'
+                const cost = order.cost || 0
+                const margin = order.price - cost
+                const tags = order.tags ? order.tags.join(';') : ''
+
+                const row = [
+                    order.id.slice(0, 8),
+                    order.date,
+                    `"${clientName.replace(/"/g, '""')}"`,
+                    `"${(order.description || '').replace(/"/g, '""')}"`,
+                    'Pagado',
+                    order.price,
+                    cost,
+                    margin,
+                    `"${tags}"`
+                ]
+                csvRows.push(row.join(','))
+            })
+
+            const csvString = csvRows.join('\n')
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement('a')
+            link.setAttribute('href', url)
+            link.setAttribute('download', `reporte_ventas_${new Date().toISOString().split('T')[0]}.csv`)
+            link.style.visibility = 'hidden'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+        } catch (error) {
+            toast.error('Error al exportar CSV')
+        }
+    }
     const [, setLoading] = useState(true)
     const [stats, setStats] = useState({
         income: 0,
@@ -392,95 +436,76 @@ export default function FinancePage() {
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                    {/* Timeframe Selector */}
-                    <div className="flex bg-slate-200/50 p-1 rounded-xl gap-1">
-                        {[
-                            { id: '7d', label: '7D' },
-                            { id: '30d', label: '30D' },
-                            { id: 'month', label: 'MES' },
-                            { id: 'all', label: 'TODO' }
-                        ].map((t) => (
-                            <button
-                                key={t.id}
-                                onClick={() => setTimeframe(t.id as any)}
-                                className={cn(
-                                    "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
-                                    timeframe === t.id
-                                        ? "bg-white text-indigo-600 shadow-sm"
-                                        : "text-slate-500 hover:text-slate-700"
-                                )}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                        onClick={handleExportCSV}
+                    >
+                        <Download size={16} />
+                        Exportar CSV
+                    </Button>
+
+
+                    {/* Filtros Avanzados */}
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-4">
+                        <div className="flex items-center gap-2 text-slate-400 mr-2 border-r pr-4">
+                            <Filter size={18} />
+                            <span className="text-xs font-bold uppercase tracking-widest">Filtros</span>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 min-w-[200px]">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Cliente</Label>
+                            <Select value={selectedClient} onValueChange={setSelectedClient}>
+                                <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold">
+                                    <div className="flex items-center gap-2">
+                                        <User size={14} className="text-indigo-500" />
+                                        <SelectValue placeholder="Todos los clientes" />
+                                    </div>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los clientes</SelectItem>
+                                    {clients.map(c => (
+                                        <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 min-w-[200px] relative">
+                            <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Etiqueta (Criterio)</Label>
+                            <div className="flex items-center gap-2">
+                                <Select value={selectedTag} onValueChange={setSelectedTag}>
+                                    <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <Tag size={14} className="text-indigo-500" />
+                                            <SelectValue placeholder="Todas las etiquetas" />
+                                        </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas las etiquetas</SelectItem>
+                                        {availableTags.map(tag => (
+                                            <SelectItem key={tag} value={tag}>{tag}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <TagManagerDialog onSuccess={fetchDetailedStats} />
+                            </div>
+                        </div>
+
+                        {(selectedClient !== 'all' || selectedTag !== 'all') && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => { setSelectedClient('all'); setSelectedTag('all'); }}
+                                className="mt-5 h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-bold text-xs gap-2"
                             >
-                                {t.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-
-                    <div className="flex items-center gap-2">
-                        <IncomeDialog onSuccess={fetchDetailedStats} />
-                        <ExpenseDialog onSuccess={fetchDetailedStats} />
+                                <X size={14} /> Limpiar
+                            </Button>
+                        )}
                     </div>
                 </div>
             </header>
-
-            {/* Filtros Avanzados */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2 text-slate-400 mr-2 border-r pr-4">
-                    <Filter size={18} />
-                    <span className="text-xs font-bold uppercase tracking-widest">Filtros</span>
-                </div>
-
-                <div className="flex flex-col gap-1.5 min-w-[200px]">
-                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Cliente</Label>
-                    <Select value={selectedClient} onValueChange={setSelectedClient}>
-                        <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold">
-                            <div className="flex items-center gap-2">
-                                <User size={14} className="text-indigo-500" />
-                                <SelectValue placeholder="Todos los clientes" />
-                            </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos los clientes</SelectItem>
-                            {clients.map(c => (
-                                <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="flex flex-col gap-1.5 min-w-[200px] relative">
-                    <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Etiqueta (Criterio)</Label>
-                    <div className="flex items-center gap-2">
-                        <Select value={selectedTag} onValueChange={setSelectedTag}>
-                            <SelectTrigger className="h-9 bg-slate-50 border-none text-xs font-bold flex-1">
-                                <div className="flex items-center gap-2">
-                                    <Tag size={14} className="text-indigo-500" />
-                                    <SelectValue placeholder="Todas las etiquetas" />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas las etiquetas</SelectItem>
-                                {availableTags.map(tag => (
-                                    <SelectItem key={tag} value={tag}>{tag}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <TagManagerDialog onSuccess={fetchDetailedStats} />
-                    </div>
-                </div>
-
-                {(selectedClient !== 'all' || selectedTag !== 'all') && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => { setSelectedClient('all'); setSelectedTag('all'); }}
-                        className="mt-5 h-9 text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-bold text-xs gap-2"
-                    >
-                        <X size={14} /> Limpiar
-                    </Button>
-                )}
-            </div>
 
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-white border text-slate-500">
@@ -936,32 +961,6 @@ export default function FinancePage() {
                     <AssetsTab cashBalance={stats.balance} inventoryValue={inventoryValue} />
                 </TabsContent>
             </Tabs>
-        </div >
-    )
-}
-
-function MetricCard({ title, value, trend, icon, subValue, highlight = false }: any) {
-    return (
-        <Card className={`border-none shadow-sm ${highlight ? 'bg-indigo-600 text-white' : 'bg-white'}`}>
-            <CardContent className="p-5">
-                <div className="flex justify-between items-start mb-4">
-                    <div className={`p-2 rounded-xl ${highlight ? 'bg-white/20' : 'bg-slate-50'}`}>
-                        {icon}
-                    </div>
-                    {trend && (
-                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${highlight ? 'bg-white/20' : 'bg-green-50 text-green-600'}`}>
-                            {trend}
-                        </span>
-                    )}
-                </div>
-                <div>
-                    <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${highlight ? 'text-indigo-100' : 'text-slate-400'}`}>
-                        {title}
-                    </p>
-                    <h4 className="text-2xl font-black mb-1">{value}</h4>
-                    <p className={`text-[10px] ${highlight ? 'text-indigo-200' : 'text-slate-500'}`}>{subValue}</p>
-                </div>
-            </CardContent>
-        </Card>
+        </div>
     )
 }
