@@ -18,6 +18,7 @@ import {
     ResponsiveContainer, Cell, PieChart, Pie, AreaChart, Area
 } from 'recharts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { type Transaction, type Client, type FinanceStats } from '@/types/orders'
 import { AssetsTab } from './AssetsTab'
 import TagManagerDialog from './TagManagerDialog'
 import { calculateOrderTotal, getAdditionalCostsTotal } from '@/lib/orderUtils'
@@ -51,7 +52,7 @@ function MetricCard({ title, value, trend, icon, subValue, highlight = false }: 
 
 export default function FinancePage() {
     const [, setLoading] = useState(true)
-    const [stats, setStats] = useState({
+    const [stats, setStats] = useState<FinanceStats>({
         income: 0,
         expenses: 0,
         profit: 0,
@@ -72,9 +73,9 @@ export default function FinancePage() {
     const [categoryData, setCategoryData] = useState<any[]>([])
     const [dailyData, setDailyData] = useState<any[]>([])
     const [cumulativeData, setCumulativeData] = useState<any[]>([])
-    const [transactions, setTransactions] = useState<any[]>([])
+    const [transactions, setTransactions] = useState<Transaction[]>([])
     const [inventoryValue, setInventoryValue] = useState(0)
-    const [clients, setClients] = useState<any[]>([])
+    const [clients, setClients] = useState<Client[]>([])
 
     // Filters State
     const [selectedClient, setSelectedClient] = useState<string>('all')
@@ -332,7 +333,7 @@ export default function FinancePage() {
         // 4. Transactions List
         const incomeItems = orders?.map(o => ({
             id: o.id,
-            type: 'income',
+            type: 'income' as const,
             category: (o.product_id || o.description !== 'Inyección de Capital') ? 'Venta' : 'Capital',
             amount: calculateOrderTotal(o),
             description: o.description || (o.products as any)?.name || 'Venta',
@@ -342,7 +343,7 @@ export default function FinancePage() {
 
         const expenseItems = expenses?.map(e => ({
             id: e.id,
-            type: 'expense',
+            type: 'expense' as const,
             category: e.category,
             amount: e.amount,
             description: e.description,
@@ -357,11 +358,11 @@ export default function FinancePage() {
         setLoading(false)
     }
 
-    const deleteTransaction = async (id: string, type: 'income' | 'expense') => {
+    const deleteTransaction = async (id: string, type: Transaction['type']) => {
         if (!confirm('¿Seguro que quieres eliminar este registro?')) return
 
         try {
-            const table = type === 'income' ? 'orders' : 'expenses'
+            const table = (type === 'income' || type === 'sale') ? 'orders' : 'expenses'
             const { error } = await supabase.from(table).delete().eq('id', id)
 
             if (error) throw error

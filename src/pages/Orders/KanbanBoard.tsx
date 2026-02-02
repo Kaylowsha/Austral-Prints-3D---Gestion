@@ -10,6 +10,7 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 import { XCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { calculateOrderTotal } from '@/lib/orderUtils'
+import { type Order } from '@/types/orders'
 
 // Define columns
 const COLUMNS = [
@@ -20,7 +21,7 @@ const COLUMNS = [
 ]
 
 export default function KanbanBoard() {
-    const [orders, setOrders] = useState<any[]>([])
+    const [orders, setOrders] = useState<Order[]>([])
     const [loading, setLoading] = useState(true)
     const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({})
 
@@ -109,7 +110,7 @@ export default function KanbanBoard() {
             }, 0)
     }
 
-    const deductInventory = async (order: any) => {
+    const deductInventory = async (order: Order) => {
         if (!order.product_id) return
 
         try {
@@ -267,7 +268,6 @@ export default function KanbanBoard() {
                                     orders={orders.filter(o => o.status === col.id)}
                                     isUpdating={isUpdating}
                                     updateStatus={updateStatus}
-                                    handleDeduct={deductInventory} // Passed as prop if needed, though ConfirmDialog is inline
                                     colId={col.id}
                                     fetchOrders={fetchOrders}
                                 />
@@ -306,7 +306,6 @@ export default function KanbanBoard() {
                                     orders={orders.filter(o => o.status === col.id)}
                                     isUpdating={isUpdating}
                                     updateStatus={updateStatus}
-                                    handleDeduct={deductInventory}
                                     colId={col.id}
                                     fetchOrders={fetchOrders}
                                 />
@@ -320,7 +319,15 @@ export default function KanbanBoard() {
 }
 
 // Extracted Component to avoid duplication
-function OrdersList({ orders, isUpdating, updateStatus, colId, fetchOrders }: any) {
+interface OrdersListProps {
+    orders: Order[]
+    isUpdating: Record<string, boolean>
+    updateStatus: (orderId: string, newStatus: string) => void
+    colId: string
+    fetchOrders: (silent?: boolean) => void
+}
+
+function OrdersList({ orders, isUpdating, updateStatus, colId, fetchOrders }: OrdersListProps) {
     if (orders.length === 0) {
         return (
             <div className="text-center py-10 text-slate-300 text-xs italic">
@@ -331,7 +338,7 @@ function OrdersList({ orders, isUpdating, updateStatus, colId, fetchOrders }: an
 
     return (
         <>
-            {orders.map((order: any) => (
+            {orders.map((order: Order) => (
                 <Card key={order.id} className={`hover:shadow-md transition-all shadow-sm bg-white border-0 ${isUpdating[order.id] ? 'opacity-50 cursor-wait' : 'cursor-default'}`}>
                     <CardContent className="p-3 space-y-2">
                         <div className="flex justify-between items-start">
