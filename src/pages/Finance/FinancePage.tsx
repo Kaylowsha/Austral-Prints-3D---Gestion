@@ -245,19 +245,16 @@ export default function FinancePage() {
         // 3. Daily Data & Cumulative
         // 3. Daily Data & Cumulative
         // Determine Start Date for Timeline
+        // Determine Start Date for Timeline
         let timelineStart = new Date()
-        let daysDiff = 30
 
         if (timeframe === '7d') {
-            daysDiff = 7
             timelineStart.setDate(timelineStart.getDate() - 7)
         } else if (timeframe === '30d') {
-            daysDiff = 30
             timelineStart.setDate(timelineStart.getDate() - 30)
         } else if (timeframe === 'month') {
             // First day of current month
             timelineStart = new Date(now.getFullYear(), now.getMonth(), 1)
-            daysDiff = Math.ceil((new Date().getTime() - timelineStart.getTime()) / (1000 * 3600 * 24))
         } else if (timeframe === 'all') {
             // Find min date from fetched orders/expenses
             const dates = [...(orders || []), ...(expenses || [])]
@@ -267,7 +264,6 @@ export default function FinancePage() {
             if (dates.length > 0) {
                 dates.sort() // ascending string sort works for ISO dates
                 timelineStart = new Date(dates[0])
-                daysDiff = Math.ceil((new Date().getTime() - timelineStart.getTime()) / (1000 * 3600 * 24))
             } else {
                 timelineStart.setDate(timelineStart.getDate() - 30) // fallback
             }
