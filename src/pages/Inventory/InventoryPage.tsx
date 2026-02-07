@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
-import { Package, Plus, Trash2, Droplets, Search, X, Pencil, DollarSign } from 'lucide-react'
+import { Package, Plus, Trash2, Droplets, Search, X, Pencil, DollarSign, Boxes } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -21,6 +21,7 @@ import {
     Cell
 } from 'recharts'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import TagSettingsTab from './TagSettingsTab'
 
 export default function InventoryPage() {
@@ -30,6 +31,7 @@ export default function InventoryPage() {
     const [open, setOpen] = useState(false)
     const [formData, setFormData] = useState({
         name: '',
+        type: 'Filamento',
         brand: '',
         color: '',
         material_type: 'PLA',
@@ -67,7 +69,6 @@ export default function InventoryPage() {
         try {
             const payload = {
                 ...formData,
-                type: 'Filamento',
                 stock_grams: Number(formData.stock_grams),
                 price_per_kg: Number(formData.price_per_kg),
                 status: Number(formData.stock_grams) < 150 ? 'bajo_stock' : 'disponible'
@@ -93,7 +94,7 @@ export default function InventoryPage() {
     }
 
     const resetForm = () => {
-        setFormData({ name: '', brand: '', color: '', material_type: 'PLA', stock_grams: '', price_per_kg: '15000' })
+        setFormData({ name: '', type: 'Filamento', brand: '', color: '', material_type: 'PLA', stock_grams: '', price_per_kg: '15000' })
         setItemToEdit(null)
     }
 
@@ -101,9 +102,10 @@ export default function InventoryPage() {
         setItemToEdit(item)
         setFormData({
             name: item.name,
+            type: item.type || 'Filamento',
             brand: item.brand || '',
-            color: item.color,
-            material_type: item.material_type,
+            color: item.color || '',
+            material_type: item.material_type || '',
             stock_grams: item.stock_grams.toString(),
             price_per_kg: (item.price_per_kg || 15000).toString()
         })
@@ -128,15 +130,15 @@ export default function InventoryPage() {
     const filteredItems = items.filter(item => {
         const matchesSearch =
             item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.color.toLowerCase().includes(searchQuery.toLowerCase())
+            (item.brand || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (item.color || '').toLowerCase().includes(searchQuery.toLowerCase())
 
-        const matchesType = filterType === 'Todos' || item.material_type === filterType
+        const matchesType = filterType === 'Todos' || item.type === filterType
 
         return matchesSearch && matchesType
     })
 
-    const materialTypes = ['Todos', ...new Set(items.map(i => i.material_type))]
+    const materialTypes = ['Todos', ...new Set(items.map(i => i.type || 'Filamento'))]
 
     const COLORS = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
 
@@ -170,23 +172,41 @@ export default function InventoryPage() {
                                         <Label>Nombre descriptivo</Label>
                                         <Input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                                     </div>
+                                    <div className="grid gap-2">
+                                        <Label className="text-indigo-600 font-bold">Categoría de Material</Label>
+                                        <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Filamento">Filamento</SelectItem>
+                                                <SelectItem value="Resina">Resina</SelectItem>
+                                                <SelectItem value="Repuesto">Repuesto</SelectItem>
+                                                <SelectItem value="Otro">Otro</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
                                             <Label>Marca</Label>
                                             <Input value={formData.brand} onChange={e => setFormData({ ...formData, brand: e.target.value })} />
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label>Color</Label>
-                                            <Input required value={formData.color} onChange={e => setFormData({ ...formData, color: e.target.value })} />
-                                        </div>
+                                        {(formData.type === 'Filamento' || formData.type === 'Resina') && (
+                                            <div className="grid gap-2">
+                                                <Label>Color</Label>
+                                                <Input required value={formData.color} onChange={e => setFormData({ ...formData, color: e.target.value })} />
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
+                                        {(formData.type === 'Filamento' || formData.type === 'Resina') && (
+                                            <div className="grid gap-2">
+                                                <Label>{formData.type === 'Filamento' ? 'Tipo (PLA, ABS, PETG...)' : 'Tipo/Modelo'}</Label>
+                                                <Input value={formData.material_type} onChange={e => setFormData({ ...formData, material_type: e.target.value })} />
+                                            </div>
+                                        )}
                                         <div className="grid gap-2">
-                                            <Label>Tipo</Label>
-                                            <Input value={formData.material_type} onChange={e => setFormData({ ...formData, material_type: e.target.value })} />
-                                        </div>
-                                        <div className="grid gap-2">
-                                            <Label>Gramos Disponibles</Label>
+                                            <Label>{formData.type === 'Filamento' || formData.type === 'Resina' ? 'Gramos Disponibles' : 'Cantidad en Stock'}</Label>
                                             <Input type="number" required value={formData.stock_grams} onChange={e => setFormData({ ...formData, stock_grams: e.target.value })} />
                                         </div>
                                     </div>
@@ -299,7 +319,7 @@ export default function InventoryPage() {
                     )}
 
                     <div className="space-y-4">
-                        <h2 className="text-xl font-bold text-slate-800">Tus Rollos en Stock ({filteredItems.length})</h2>
+                        <h2 className="text-xl font-bold text-slate-800">Tus Materiales en Stock ({filteredItems.length})</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredItems.map(item => (
                                 <Card key={item.id} className="overflow-hidden border-slate-200 relative group bg-white shadow-sm hover:shadow-md transition-all">
@@ -308,11 +328,17 @@ export default function InventoryPage() {
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
-                                                    <Droplets size={20} />
+                                                    {item.type === 'Filamento' || item.type === 'Resina' ? (
+                                                        <Droplets size={20} />
+                                                    ) : (
+                                                        <Boxes size={20} />
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <h3 className="font-bold text-slate-800 text-base">{item.name}</h3>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.brand} • {item.material_type}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                        {item.brand && `${item.brand} • `}{item.material_type || item.type}
+                                                    </p>
                                                 </div>
                                             </div>
                                             <div className="flex gap-1">
@@ -328,8 +354,15 @@ export default function InventoryPage() {
                                         <div className="flex items-end justify-between mt-8">
                                             <div>
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    <div className="w-4 h-4 rounded-full border border-slate-200 shadow-inner" style={{ backgroundColor: item.color?.toLowerCase() }} />
-                                                    <span className="text-sm font-black text-slate-700 uppercase tracking-tight">{item.color}</span>
+                                                    <Badge className="bg-indigo-100 text-indigo-700 hover:bg-indigo-100 border-none px-2 py-0 text-[9px] font-black uppercase">
+                                                        {item.type || 'Filamento'}
+                                                    </Badge>
+                                                    {item.color && (
+                                                        <>
+                                                            <div className="w-4 h-4 rounded-full border border-slate-200 shadow-inner" style={{ backgroundColor: item.color?.toLowerCase() }} />
+                                                            <span className="text-sm font-black text-slate-700 uppercase tracking-tight">{item.color}</span>
+                                                        </>
+                                                    )}
                                                 </div>
                                                 {item.stock_grams < 150 ? (
                                                     <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 border-none px-2 py-0 text-[9px] font-black uppercase">Crítico</Badge>
