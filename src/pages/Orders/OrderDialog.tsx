@@ -105,9 +105,11 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
             const hours = selectedProduct?.estimated_hours || 0
             const mins = selectedProduct?.estimated_mins || 0
             const materialPrice = 15000 // Default material price if not specified
-            const itemsCost = formData.inventory_items.reduce((sum, item) => sum + item.calculated_cost, 0)
 
-            const estimatedCost = (weight * (materialPrice / 1000)) + itemsCost
+
+            const estimatedCost = (weight * (materialPrice / 1000))
+            // itemsCost is NOT added here because it is stored in inventory_items 
+            // and added dynamically in FinancePage via getAdditionalCostsTotal
 
             const { data, error } = await supabase.from('orders').insert([
                 {

@@ -102,9 +102,7 @@ const QuotationPage = () => {
         customClientName: '',
         useCustomClient: true,
         tags: [] as string[],
-        customClientName: '',
-        useCustomClient: true,
-        tags: [] as string[],
+
         additional_costs: [] as AdditionalCost[],
         inventory_items: [] as InventoryItemSelection[]
     });
@@ -236,7 +234,7 @@ const QuotationPage = () => {
                 quoted_sales_multiplier: config.salesMultiplier,
                 quoted_material_price: selectedMaterial?.price_per_kg || 15000,
                 tags: orderData.tags,
-                tags: orderData.tags,
+
                 additional_costs: orderData.additional_costs,
                 inventory_items: orderData.inventory_items
             }]);
@@ -245,8 +243,7 @@ const QuotationPage = () => {
 
             toast.success('¡Pedido creado con éxito!');
             setIsConverting(false);
-            toast.success('¡Pedido creado con éxito!');
-            setIsConverting(false);
+
             setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true, tags: [], additional_costs: [], inventory_items: [] });
             setQuantity(0);
         } catch (err: any) {
