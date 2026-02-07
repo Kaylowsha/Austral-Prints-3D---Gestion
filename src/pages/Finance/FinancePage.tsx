@@ -250,11 +250,90 @@ export default function FinancePage() {
             return d.toISOString().split('T')[0]
         })
 
-        let runningBalance = 0
-        let accIngresos = 0
-        let accSugerido = 0
-        let accCosto = 0 // Directos (Puros)
-        let accCostoTotal = 0 // Directos + Adicionales
+        // 2.5 Calculate Initial Values (before startDate)
+        let initialBalance = 0
+        let initialIngresos = 0
+        let initialSugerido = 0
+        let initialCosto = 0
+        let initialCostoTotal = 0
+
+        if (startDate) {
+            // Fetch everything BEFORE startDate to set initial state
+            // Note: This matches the filters (Client/Tag) to be consistent
+            let prevOrdersQuery = supabase.from('orders').select('*').lt('date', startDate)
+            let prevExpensesQuery = supabase.from('expenses').select('*').lt('date', startDate)
+
+            if (selectedClient !== 'all') prevOrdersQuery = prevOrdersQuery.eq('client_id', selectedClient)
+            if (selectedTag !== 'all') {
+                prevOrdersQuery = prevOrdersQuery.contains('tags', [selectedTag])
+                prevExpensesQuery = prevExpensesQuery.contains('tags', [selectedTag])
+            }
+
+            const { data: prevOrders } = await prevOrdersQuery
+            const { data: prevExpenses } = await prevExpensesQuery
+
+            // Re-calculating initialBalance strictly following daily logic:
+            prevOrders?.forEach(o => {
+                if (['entregado'].includes(o.status)) {
+                    // Operational Income
+                    if (o.product_id || o.description !== 'Inyección de Capital') {
+                        initialBalance += calculateOrderTotal(o)
+                    }
+                    // Capital Injection
+                    if (!o.product_id && o.description === 'Inyección de Capital') {
+                        initialBalance += calculateOrderTotal(o)
+                    }
+                }
+            })
+            prevExpenses?.forEach(e => {
+                initialBalance -= (e.amount || 0)
+            })
+
+            // Add operational income/cost to balance
+            // Income
+            prevOrders?.forEach(o => {
+                if (['entregado'].includes(o.status) && (o.product_id || o.description !== 'Inyección de Capital')) {
+                    initialBalance += calculateOrderTotal(o)
+                }
+            })
+            // Costs? NO. Balance is Income - Expenses. 
+            // In this strict cash flow view: Balance = (Sales + Injections) - (Expenses + Withdrawals + Inversions)
+            // It does NOT subtract "Internal Production Cost" because that's not a cash outflow (technically material purchase is the outflow)
+            // BUT, the chart shows "Balance en Caja".
+            // If we follow the "Cash Flow" definition: initialBalance is correct as (Income - Expense).
+            // However, the chart shows `balance` which in the code (line 331) subtracts `dayProdCost_Total`?!
+            // Wait, line 305: dayNet = Income - OpExpense - ProdCost + Injections - Withdrawals.
+            // Using "ProdCost" (Consumption) as a proxy for Cash Outflow is an approximation if we don't track raw material purchases.
+            // If the user tracks "Expenses" (Category: Material), then subtracting ProdCost double counts!
+            // Let's assume the user DOES NOT track material purchases as expenses, but relies on "Cost" to estimate outflow.
+
+            // Re-calculating initialBalance strictly following daily logic:
+            prevOrders?.forEach(o => {
+                if (['entregado'].includes(o.status)) {
+                    // Operational Income
+                    if (o.product_id || o.description !== 'Inyección de Capital') {
+                        initialBalance += calculateOrderTotal(o)
+                    }
+                    // Production Cost (Proxy for outflow)
+                    if (o.status !== 'cancelado') {
+                        initialBalance -= ((o.cost || 0) + getAdditionalCostsTotal(o))
+                    }
+                    // Capital Injection
+                    if (!o.product_id && o.description === 'Inyección de Capital') {
+                        initialBalance += calculateOrderTotal(o)
+                    }
+                }
+            })
+            prevExpenses?.forEach(e => {
+                initialBalance -= (e.amount || 0)
+            })
+        }
+
+        let runningBalance = initialBalance
+        let accIngresos = initialIngresos
+        let accSugerido = initialSugerido
+        let accCosto = initialCosto // Directos (Puros)
+        let accCostoTotal = initialCostoTotal // Directos + Adicionales
 
         const historyData = timeline.map(date => {
             // 1. Ingreso Real (Cobrado)
