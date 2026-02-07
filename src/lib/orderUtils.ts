@@ -25,6 +25,12 @@ export function calculateOrderTotal(order: any): number {
  * @returns Sum of all additional costs
  */
 export function getAdditionalCostsTotal(order: any): number {
-    return (order.additional_costs || [])
+    const additionalCosts = (order.additional_costs || [])
         .reduce((sum: number, cost: AdditionalCost) => sum + (cost.amount || 0), 0)
+
+    // Also include inventory items (units) as additional costs
+    const inventoryItemsCost = (order.inventory_items || [])
+        .reduce((sum: number, item: any) => sum + (item.calculated_cost || 0), 0)
+
+    return additionalCosts + inventoryItemsCost
 }

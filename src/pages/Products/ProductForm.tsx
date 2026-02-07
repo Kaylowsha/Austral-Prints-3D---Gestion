@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import AdditionalCostsInput, { type AdditionalCost } from '@/components/AdditionalCostsInput'
+import { InventoryItemSelector, type InventoryItemSelection } from '@/components/InventoryItemSelector'
 
 interface ProductFormProps {
     onSuccess: () => void
@@ -30,7 +31,8 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
         base_price: '',
         weight_grams: '',
         print_time_mins: '',
-        additional_costs: [] as AdditionalCost[]
+        additional_costs: [] as AdditionalCost[],
+        inventory_items: [] as InventoryItemSelection[]
     })
 
     useEffect(() => {
@@ -40,7 +42,8 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
                 base_price: product.base_price?.toString() || '',
                 weight_grams: product.weight_grams?.toString() || '',
                 print_time_mins: product.print_time_mins?.toString() || '',
-                additional_costs: product.additional_costs || []
+                additional_costs: product.additional_costs || [],
+                inventory_items: product.inventory_items || []
             })
         }
     }, [product, open])
@@ -54,7 +57,8 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
             base_price: Number(data.base_price) || 0,
             weight_grams: Number(data.weight_grams) || 0,
             print_time_mins: Number(data.print_time_mins) || 0,
-            additional_costs: data.additional_costs
+            additional_costs: data.additional_costs,
+            inventory_items: data.inventory_items
         }
 
         try {
@@ -77,7 +81,7 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
             toast.success(product ? 'Producto actualizado' : 'Producto creado')
             setOpen(false)
             if (!product) {
-                setData({ name: '', base_price: '', weight_grams: '', print_time_mins: '', additional_costs: [] })
+                setData({ name: '', base_price: '', weight_grams: '', print_time_mins: '', additional_costs: [], inventory_items: [] })
             }
             onSuccess()
         } catch (error: any) {
@@ -157,13 +161,24 @@ export default function ProductForm({ onSuccess, product, trigger }: ProductForm
                     </div>
 
                     <div className="border-t pt-4">
-                        <Label className="mb-2 block font-bold text-slate-700">Costos Adicionales Predeterminados</Label>
+                        <Label className="mb-2 block font-bold text-slate-700">Insumos de Inventario (Unidades)</Label>
+                        <InventoryItemSelector
+                            value={data.inventory_items}
+                            onChange={(items) => setData({ ...data, inventory_items: items })}
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                            Estos ítems se descontarán del stock al completar un pedido.
+                        </p>
+                    </div>
+
+                    <div className="border-t pt-4">
+                        <Label className="mb-2 block font-bold text-slate-700">Costos Adicionales (Otros)</Label>
                         <AdditionalCostsInput
                             costs={data.additional_costs}
                             onChange={(costs) => setData({ ...data, additional_costs: costs })}
                         />
                         <p className="text-[10px] text-slate-400 mt-1">
-                            Estos costos se cargarán automáticamente al crear un pedido con este producto.
+                            Costos extras como pintura, lijado manual, etc.
                         </p>
                     </div>
 

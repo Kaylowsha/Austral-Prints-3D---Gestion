@@ -153,8 +153,13 @@ export default function FinancePage() {
         // Separate Operational from Capital
         // Separación estricta: Solo 'entregado' es Ingreso Real.
         const realized_orders = orders?.filter(o => ['entregado'].includes(o.status)) || []
-        // Costos Directos: Todo lo que no está cancelado se considera consumo de producción
-        const production_cost_orders = orders?.filter(o => o.status !== 'cancelado') || []
+
+        // CORRECCIÓN LÓGICA (Matching Principle): 
+        // Para calcular la utilidad REAL, los costos directos solo deben restarse de lo que FINALMENTE SE VENDIÓ.
+        // Si incluimos costos de 'en_proceso', estamos castigando la utilidad actual con costos futuros.
+        const production_cost_orders = realized_orders; // Solo de lo entregado
+
+        // Para métricas de carga de trabajo o "flotante", sí usamos todo lo pendiente
         const pending_orders = orders?.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status)) || []
 
         // Realized Income: Products + Manual Sales (Anything that is NOT Capital Injection)
@@ -261,18 +266,18 @@ export default function FinancePage() {
                 .reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
             // 3. Costos de Producción (Directos: Filamento + Energía)
-            // NO incluye adicionales aquí, es puramente manufactura
-            const dayProdCost_Pure = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status !== 'cancelado')
+            // Lógica Ajustada: Solo de lo entregado
+            const dayProdCost_Pure = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado' && o.status !== 'cancelado')
                 .reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
-            const dayAdditionalCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status !== 'cancelado')
+            const dayAdditionalCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado' && o.status !== 'cancelado')
                 .reduce((acc, curr) => acc + getAdditionalCostsTotal(curr), 0) || 0
 
             // 4. Costo Total (Directo + Adicionales)
             const dayProdCost_Total = dayProdCost_Pure + dayAdditionalCost
 
             // Desglose Material vs Energía (Solo sobre el Costo Puro)
-            const dayMaterialCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status !== 'cancelado')
+            const dayMaterialCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado' && o.status !== 'cancelado')
                 .reduce((acc, curr) => {
                     if (curr.quoted_grams && curr.quoted_material_price) {
                         return acc + ((curr.quoted_grams * (curr.quoted_material_price / 1000)) * (curr.quantity || 1))

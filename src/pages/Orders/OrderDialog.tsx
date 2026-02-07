@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import TagSelector from '@/components/TagSelector'
 import AdditionalCostsInput, { type AdditionalCost } from '@/components/AdditionalCostsInput'
+import { InventoryItemSelector, type InventoryItemSelection } from '@/components/InventoryItemSelector'
 
 interface OrderDialogProps {
     onSuccess?: () => void
@@ -47,7 +48,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
         client_id: '',
         custom_client_name: '',
         useCustomClient: false,
-        additional_costs: [] as AdditionalCost[]
+        additional_costs: [] as AdditionalCost[],
+        inventory_items: [] as InventoryItemSelection[]
     })
 
     useEffect(() => {
@@ -86,7 +88,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                 product_id: productId,
                 description: product.name,
                 price: product.base_price.toString(),
-                additional_costs: product.additional_costs || []
+                additional_costs: product.additional_costs || [],
+                inventory_items: product.inventory_items || []
             })
         }
     }
@@ -102,8 +105,9 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
             const hours = selectedProduct?.estimated_hours || 0
             const mins = selectedProduct?.estimated_mins || 0
             const materialPrice = 15000 // Default material price if not specified
+            const itemsCost = formData.inventory_items.reduce((sum, item) => sum + item.calculated_cost, 0)
 
-            const estimatedCost = weight * (materialPrice / 1000)
+            const estimatedCost = (weight * (materialPrice / 1000)) + itemsCost
 
             const { data, error } = await supabase.from('orders').insert([
                 {
@@ -124,6 +128,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     quoted_mins: mins,
                     quoted_material_price: materialPrice,
                     additional_costs: formData.additional_costs,
+                    inventory_items: formData.inventory_items,
                     created_at: new Date().toISOString()
                 }
             ]).select()
@@ -152,7 +157,8 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                 client_id: '',
                 custom_client_name: '',
                 useCustomClient: false,
-                additional_costs: []
+                additional_costs: [],
+                inventory_items: []
             })
             if (onSuccess) onSuccess()
 
@@ -276,6 +282,14 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                                 onChange={e => setFormData({ ...formData, price: e.target.value })}
                             />
                         </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Insumos (Cadenas, Argollas, etc)</Label>
+                        <InventoryItemSelector
+                            value={formData.inventory_items}
+                            onChange={(items) => setFormData({ ...formData, inventory_items: items })}
+                        />
                     </div>
 
                     <div className="grid gap-2">

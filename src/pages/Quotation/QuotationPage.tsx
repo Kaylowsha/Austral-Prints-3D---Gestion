@@ -5,6 +5,7 @@ import { calculateQuotation, type QuotationParams } from '@/lib/quotation';
 import { toast } from 'sonner';
 import TagSelector from '@/components/TagSelector';
 import AdditionalCostsInput, { type AdditionalCost } from '@/components/AdditionalCostsInput';
+import { InventoryItemSelector, type InventoryItemSelection } from '@/components/InventoryItemSelector';
 
 import {
     Dialog,
@@ -35,6 +36,7 @@ interface Product {
     print_time_mins: number;
     base_price: number;
     additional_costs?: AdditionalCost[];
+    inventory_items?: InventoryItemSelection[];
 }
 
 interface CostConfig {
@@ -100,7 +102,11 @@ const QuotationPage = () => {
         customClientName: '',
         useCustomClient: true,
         tags: [] as string[],
-        additional_costs: [] as AdditionalCost[]
+        customClientName: '',
+        useCustomClient: true,
+        tags: [] as string[],
+        additional_costs: [] as AdditionalCost[],
+        inventory_items: [] as InventoryItemSelection[]
     });
 
     const fetchInventory = async () => {
@@ -144,15 +150,16 @@ const QuotationPage = () => {
                 }
             }
 
-            // Add additional costs to the final price
+            // Add additional costs and inventory items to the final price
             const additionalCostsTotal = orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0);
+            const inventoryItemsTotal = orderData.inventory_items.reduce((sum, item) => sum + item.calculated_cost, 0);
 
             setOrderData(prev => ({
                 ...prev,
-                finalPrice: priceToUse + additionalCostsTotal
+                finalPrice: priceToUse + additionalCostsTotal + inventoryItemsTotal
             }));
         }
-    }, [isConverting, results.finalPrice, quotationMode, selectedProductId, products, orderData.additional_costs]);
+    }, [isConverting, results.finalPrice, quotationMode, selectedProductId, products, orderData.additional_costs, orderData.inventory_items]);
 
     const getMaterialPower = (type: string) => {
         switch (type?.toUpperCase()) {
@@ -195,7 +202,8 @@ const QuotationPage = () => {
             setOrderData(prev => ({
                 ...prev,
                 description: product.name,
-                additional_costs: product.additional_costs || []
+                additional_costs: product.additional_costs || [],
+                inventory_items: product.inventory_items || []
             }));
         }
     };
@@ -228,7 +236,9 @@ const QuotationPage = () => {
                 quoted_sales_multiplier: config.salesMultiplier,
                 quoted_material_price: selectedMaterial?.price_per_kg || 15000,
                 tags: orderData.tags,
-                additional_costs: orderData.additional_costs
+                tags: orderData.tags,
+                additional_costs: orderData.additional_costs,
+                inventory_items: orderData.inventory_items
             }]);
 
             if (error) throw error;
@@ -237,7 +247,7 @@ const QuotationPage = () => {
             setIsConverting(false);
             toast.success('¡Pedido creado con éxito!');
             setIsConverting(false);
-            setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true, tags: [], additional_costs: [] });
+            setOrderData({ clientId: '', description: '', finalPrice: 0, customClientName: '', useCustomClient: true, tags: [], additional_costs: [], inventory_items: [] });
             setQuantity(0);
         } catch (err: any) {
             toast.error('Error al crear pedido', { description: err.message });
@@ -465,6 +475,15 @@ const QuotationPage = () => {
 
                         {/* Additional Costs Section */}
                         <div className="pt-6 border-t border-slate-200">
+                            <div className="mb-4">
+                                <label className="flex items-center gap-2 text-sm font-bold text-slate-600 uppercase tracking-widest pl-1 mb-2">
+                                    <Package2 size={16} /> Insumos Adicionales
+                                </label>
+                                <InventoryItemSelector
+                                    value={orderData.inventory_items}
+                                    onChange={(items) => setOrderData({ ...orderData, inventory_items: items })}
+                                />
+                            </div>
                             <AdditionalCostsInput
                                 costs={orderData.additional_costs}
                                 onChange={(costs) => setOrderData({ ...orderData, additional_costs: costs })}
@@ -480,11 +499,11 @@ const QuotationPage = () => {
                                 {orderData.additional_costs.length > 0 ? 'Total Final' : 'Precio Sugerido'}
                             </p>
                             <h3 className="text-6xl font-black mt-3 text-emerald-400 tabular-nums">
-                                ${(results.finalPrice + orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
+                                ${(results.finalPrice + orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0) + orderData.inventory_items.reduce((sum, i) => sum + i.calculated_cost, 0)).toLocaleString('es-CL', { maximumFractionDigits: 0 })}
                             </h3>
-                            {orderData.additional_costs.length > 0 && (
+                            {(orderData.additional_costs.length > 0 || orderData.inventory_items.length > 0) && (
                                 <p className="text-slate-500 text-sm mt-2 italic">
-                                    Incluye ${orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0).toLocaleString('es-CL')} en costos adicionales
+                                    Incluye ${(orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0) + orderData.inventory_items.reduce((sum, i) => sum + i.calculated_cost, 0)).toLocaleString('es-CL')} en costos adicionales
                                 </p>
                             )}
                         </div>
@@ -502,9 +521,15 @@ const QuotationPage = () => {
                                 <span className="text-slate-500 text-sm italic">Costo Total (x1.5)</span>
                                 <span className="font-bold text-lg text-indigo-400 tabular-nums">${results.totalOperationalCost.toLocaleString('es-CL', { maximumFractionDigits: 0 })}</span>
                             </div>
-                            {orderData.additional_costs.length > 0 && (
+                            {(orderData.additional_costs.length > 0 || orderData.inventory_items.length > 0) && (
                                 <div className="pt-4 border-t border-slate-700">
                                     <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Costos Adicionales</div>
+                                    {orderData.inventory_items.map((item, idx) => (
+                                        <div key={`inv-${idx}`} className="flex justify-between items-center text-sm mb-1">
+                                            <span className="text-slate-400">{item.name} ({item.quantity} un)</span>
+                                            <span className="text-slate-300 font-semibold">${item.calculated_cost.toLocaleString('es-CL')}</span>
+                                        </div>
+                                    ))}
                                     {orderData.additional_costs.map((cost, idx) => (
                                         <div key={idx} className="flex justify-between items-center text-sm mb-1">
                                             <span className="text-slate-400">{cost.description}</span>
@@ -568,6 +593,13 @@ const QuotationPage = () => {
                             />
                         </div>
                         <div className="grid gap-2">
+                            <Label>Insumos</Label>
+                            <InventoryItemSelector
+                                value={orderData.inventory_items}
+                                onChange={(items) => setOrderData({ ...orderData, inventory_items: items })}
+                            />
+                        </div>
+                        <div className="grid gap-2">
                             <AdditionalCostsInput
                                 costs={orderData.additional_costs}
                                 onChange={(costs) => setOrderData({ ...orderData, additional_costs: costs })}
@@ -583,14 +615,14 @@ const QuotationPage = () => {
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-slate-600">Costos Adicionales</span>
                                         <span className="font-bold text-slate-700">
-                                            ${orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0).toLocaleString('es-CL')}
+                                            ${(orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0) + orderData.inventory_items.reduce((sum, i) => sum + i.calculated_cost, 0)).toLocaleString('es-CL')}
                                         </span>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center pt-2 border-t border-indigo-200">
                                     <span className="font-bold text-indigo-700">Total Final</span>
                                     <span className="text-xl font-black text-indigo-700">
-                                        ${(results.finalPrice + orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0)).toLocaleString('es-CL')}
+                                        ${(results.finalPrice + orderData.additional_costs.reduce((sum, c) => sum + c.amount, 0) + orderData.inventory_items.reduce((sum, i) => sum + i.calculated_cost, 0)).toLocaleString('es-CL')}
                                     </span>
                                 </div>
                             </div>
