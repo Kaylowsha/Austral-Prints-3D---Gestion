@@ -9,6 +9,7 @@ import { Package, Plus, Trash2, Droplets, Search, X, Pencil, DollarSign, Boxes }
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import {
     BarChart,
@@ -35,8 +36,11 @@ export default function InventoryPage() {
         brand: '',
         color: '',
         material_type: 'PLA',
+        measurement_unit: 'grams',
         stock_grams: '',
-        price_per_kg: '15000'
+        stock_units: '',
+        price_per_kg: '15000',
+        price_per_unit: ''
     })
     const [searchQuery, setSearchQuery] = useState('')
     const [filterType, setFilterType] = useState('Todos')
@@ -67,11 +71,20 @@ export default function InventoryPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         try {
-            const payload = {
-                ...formData,
-                stock_grams: Number(formData.stock_grams),
-                price_per_kg: Number(formData.price_per_kg),
-                status: Number(formData.stock_grams) < 150 ? 'bajo_stock' : 'disponible'
+            const payload: any = {
+                name: formData.name,
+                type: formData.type,
+                brand: formData.brand,
+                color: formData.color,
+                material_type: formData.material_type,
+                measurement_unit: formData.measurement_unit,
+                price_per_kg: formData.measurement_unit === 'grams' ? Number(formData.price_per_kg) : 0,
+                price_per_unit: formData.measurement_unit === 'units' ? Number(formData.price_per_unit) : 0,
+                stock_grams: formData.measurement_unit === 'grams' ? Number(formData.stock_grams) : 0,
+                stock_units: formData.measurement_unit === 'units' ? Number(formData.stock_units) : 0,
+                status: (formData.measurement_unit === 'grams' && Number(formData.stock_grams) < 150) ||
+                    (formData.measurement_unit === 'units' && Number(formData.stock_units) < 5)
+                    ? 'bajo_stock' : 'disponible'
             }
 
             let error;
@@ -94,7 +107,18 @@ export default function InventoryPage() {
     }
 
     const resetForm = () => {
-        setFormData({ name: '', type: 'Filamento', brand: '', color: '', material_type: 'PLA', stock_grams: '', price_per_kg: '15000' })
+        setFormData({
+            name: '',
+            type: 'Filamento',
+            brand: '',
+            color: '',
+            material_type: 'PLA',
+            measurement_unit: 'grams',
+            stock_grams: '',
+            stock_units: '',
+            price_per_kg: '15000',
+            price_per_unit: ''
+        })
         setItemToEdit(null)
     }
 
@@ -106,8 +130,11 @@ export default function InventoryPage() {
             brand: item.brand || '',
             color: item.color || '',
             material_type: item.material_type || '',
-            stock_grams: item.stock_grams.toString(),
-            price_per_kg: (item.price_per_kg || 15000).toString()
+            measurement_unit: item.measurement_unit || 'grams',
+            stock_grams: item.measurement_unit === 'grams' ? item.stock_grams.toString() : '',
+            stock_units: item.measurement_unit === 'units' ? (item.stock_units || 0).toString() : '',
+            price_per_kg: item.measurement_unit === 'grams' ? (item.price_per_kg || 15000).toString() : '15000',
+            price_per_unit: item.measurement_unit === 'units' ? (item.price_per_unit || 0).toString() : ''
         })
         setOpen(true)
     }
@@ -205,14 +232,52 @@ export default function InventoryPage() {
                                                 <Input value={formData.material_type} onChange={e => setFormData({ ...formData, material_type: e.target.value })} />
                                             </div>
                                         )}
-                                        <div className="grid gap-2">
-                                            <Label>{formData.type === 'Filamento' || formData.type === 'Resina' ? 'Gramos Disponibles' : 'Cantidad en Stock'}</Label>
-                                            <Input type="number" required value={formData.stock_grams} onChange={e => setFormData({ ...formData, stock_grams: e.target.value })} />
-                                        </div>
                                     </div>
+
+                                    {/* Measurement Unit Selection */}
                                     <div className="grid gap-2 border-t pt-4">
-                                        <Label className="text-indigo-600 font-bold">Precio por Kilo ($)</Label>
-                                        <Input type="number" required value={formData.price_per_kg} onChange={e => setFormData({ ...formData, price_per_kg: e.target.value })} />
+                                        <Label className="text-indigo-600 font-bold">Unidad de Medida</Label>
+                                        <RadioGroup
+                                            value={formData.measurement_unit}
+                                            onValueChange={(value: string) => setFormData({ ...formData, measurement_unit: value })}
+                                            className="flex gap-4"
+                                        >
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="grams" id="grams" />
+                                                <Label htmlFor="grams" className="font-normal cursor-pointer">Gramos (kg)</Label>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                                <RadioGroupItem value="units" id="units" />
+                                                <Label htmlFor="units" className="font-normal cursor-pointer">Unidades</Label>
+                                            </div>
+                                        </RadioGroup>
+                                    </div>
+
+                                    {/* Conditional Stock and Price Fields */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {formData.measurement_unit === 'grams' ? (
+                                            <>
+                                                <div className="grid gap-2">
+                                                    <Label>Stock Disponible (g)</Label>
+                                                    <Input type="number" required value={formData.stock_grams} onChange={e => setFormData({ ...formData, stock_grams: e.target.value })} />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label>Precio por Kilo ($)</Label>
+                                                    <Input type="number" required value={formData.price_per_kg} onChange={e => setFormData({ ...formData, price_per_kg: e.target.value })} />
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="grid gap-2">
+                                                    <Label>Stock Disponible (unidades)</Label>
+                                                    <Input type="number" required value={formData.stock_units} onChange={e => setFormData({ ...formData, stock_units: e.target.value })} />
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    <Label>Precio por Unidad ($)</Label>
+                                                    <Input type="number" required value={formData.price_per_unit} onChange={e => setFormData({ ...formData, price_per_unit: e.target.value })} />
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                     <DialogFooter>
                                         <Button type="submit" className="w-full bg-indigo-600">{itemToEdit ? 'Actualizar Cambios' : 'Guardar Material'}</Button>
@@ -368,17 +433,24 @@ export default function InventoryPage() {
                                                     <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 border-none px-2 py-0 text-[9px] font-black uppercase">Crítico</Badge>
                                                 ) : (
                                                     <div className="h-1.5 w-16 bg-slate-100 rounded-full overflow-hidden">
-                                                        <div className="h-full bg-green-500" style={{ width: `${Math.min(100, (item.stock_grams / 1000) * 100)}%` }} />
+                                                        <div className="h-full bg-green-500" style={{ width: `${Math.min(100, (item.measurement_unit === 'grams' ? (item.stock_grams / 1000) * 100 : (item.stock_units / 50) * 100))}%` }} />
                                                     </div>
                                                 )}
                                                 <p className="text-[10px] font-bold text-slate-400 mt-2 flex items-center gap-1">
                                                     <DollarSign size={10} className="text-emerald-500" />
-                                                    ${(item.price_per_kg || 15000).toLocaleString('es-CL')} / kg
+                                                    {item.measurement_unit === 'units'
+                                                        ? `$${(item.price_per_unit || 0).toLocaleString('es-CL')} / unidad`
+                                                        : `$${(item.price_per_kg || 15000).toLocaleString('es-CL')} / kg`
+                                                    }
                                                 </p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-3xl font-black text-slate-900 leading-none tracking-tighter">{item.stock_grams}g</p>
-                                                <p className="text-[9px] text-slate-400 font-black uppercase mt-1">Disponible</p>
+                                                <p className="text-3xl font-black text-slate-900 leading-none tracking-tighter">
+                                                    {item.measurement_unit === 'units' ? `${item.stock_units || 0}` : `${item.stock_grams}g`}
+                                                </p>
+                                                <p className="text-[9px] text-slate-400 font-black uppercase mt-1">
+                                                    {item.measurement_unit === 'units' ? 'Unidades' : 'Disponible'}
+                                                </p>
                                             </div>
                                         </div>
                                     </CardContent>
