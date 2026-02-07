@@ -9,7 +9,7 @@ import EditOrderDialog from './EditOrderDialog'
 import ConfirmDialog from '@/components/ConfirmDialog'
 import { XCircle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { calculateOrderTotal } from '@/lib/orderUtils'
+import { calculateOrderTotal, getAdditionalCostsTotal } from '@/lib/orderUtils'
 import { type Order } from '@/types/orders'
 
 // Define columns
@@ -27,31 +27,73 @@ export default function KanbanBoard() {
 
     const handleExportCSV = async () => {
         try {
+            toast.loading('Generando reporte...')
             const { data: orders } = await supabase
                 .from('orders')
                 .select('*, clients(full_name)')
-                .eq('status', 'entregado')
+                .neq('status', 'cancelado') // Export everything except cancelled for full history
                 .order('date', { ascending: false })
 
-            if (!orders) return toast.error('No hay pedidos para exportar')
+            if (!orders) {
+                toast.dismiss()
+                return toast.error('No hay pedidos para exportar')
+            }
 
-            const headers = ['ID', 'Fecha', 'Cliente', 'Descripción', 'Estado', 'Monto Venta', 'Costo Directo', 'Margen Estimado', 'Etiquetas']
+            const headers = [
+                'ID',
+                'Fecha',
+                'Cliente',
+                'Descripción',
+                'Estado',
+                'Cantidad',
+                'Precio Base (Unit)',
+                'Costos Adicionales',
+                'TOTAL VENTA',
+                'Costo Base',
+                'TOTAL COSTO',
+                'MARGEN REAL',
+                'Etiquetas'
+            ]
+
             const csvRows = [headers.join(',')]
 
             orders.forEach(order => {
                 const clientName = order.custom_client_name || order.clients?.full_name || 'Cliente General'
-                const cost = order.cost || 0
-                const margin = order.price - cost
+
+                // Calculations matching Finance Page logic
+                const quantity = order.quantity || 1
+                const basePrice = order.price || 0
+                const additionalCosts = getAdditionalCostsTotal(order)
+                const totalSale = calculateOrderTotal(order)
+
+                const baseCost = order.cost || 0
+                // Finance page treats base cost as "Direct Cost" and adds additional costs for "Real Total Cost"
+                const totalCost = baseCost + additionalCosts
+
+                const margin = totalSale - totalCost
                 const tags = order.tags ? order.tags.join(';') : ''
+
+                // Map status to readable label
+                const statusMap: Record<string, string> = {
+                    'pendiente': 'Pendiente',
+                    'en_proceso': 'En Proceso',
+                    'terminado': 'Terminado',
+                    'entregado': 'Entregado (Pagado)',
+                    'cancelado': 'Cancelado'
+                }
 
                 const row = [
                     order.id.slice(0, 8),
                     order.date || order.created_at.split('T')[0],
                     `"${clientName.replace(/"/g, '""')}"`,
                     `"${(order.description || '').replace(/"/g, '""')}"`,
-                    'Pagado',
-                    order.price,
-                    cost,
+                    statusMap[order.status] || order.status,
+                    quantity,
+                    basePrice,
+                    additionalCosts,
+                    totalSale,
+                    baseCost,
+                    totalCost,
                     margin,
                     `"${tags}"`
                 ]
@@ -63,12 +105,17 @@ export default function KanbanBoard() {
             const url = URL.createObjectURL(blob)
             const link = document.createElement('a')
             link.setAttribute('href', url)
-            link.setAttribute('download', `reporte_ventas_${new Date().toISOString().split('T')[0]}.csv`)
+            link.setAttribute('download', `historial_pedidos_${new Date().toISOString().split('T')[0]}.csv`)
             link.style.visibility = 'hidden'
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
-        } catch {
+
+            toast.dismiss()
+            toast.success('Reporte descargado correctamente')
+        } catch (error) {
+            console.error(error)
+            toast.dismiss()
             toast.error('Error al exportar CSV')
         }
     }
@@ -240,7 +287,7 @@ export default function KanbanBoard() {
                         className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md h-10 px-4 transition-all hover:scale-105"
                     >
                         <Download size={20} />
-                        EXPORTAR LISTADO (CSV)
+                        EXPORTAR HISTORIAL (CSV)
                     </Button>
                     <OrderDialog onSuccess={fetchOrders} />
                 </div>
