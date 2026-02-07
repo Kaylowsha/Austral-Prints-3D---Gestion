@@ -243,12 +243,45 @@ export default function FinancePage() {
         setCategoryData(categoryArray)
 
         // 3. Daily Data & Cumulative
-        const daysToFetch = timeframe === '7d' ? 7 : 30
-        const timeline = Array.from({ length: daysToFetch }, (_, i) => {
-            const d = new Date()
-            d.setDate(d.getDate() - (daysToFetch - 1 - i))
-            return d.toISOString().split('T')[0]
-        })
+        // 3. Daily Data & Cumulative
+        // Determine Start Date for Timeline
+        let timelineStart = new Date()
+        let daysDiff = 30
+
+        if (timeframe === '7d') {
+            daysDiff = 7
+            timelineStart.setDate(timelineStart.getDate() - 7)
+        } else if (timeframe === '30d') {
+            daysDiff = 30
+            timelineStart.setDate(timelineStart.getDate() - 30)
+        } else if (timeframe === 'month') {
+            // First day of current month
+            timelineStart = new Date(now.getFullYear(), now.getMonth(), 1)
+            daysDiff = Math.ceil((new Date().getTime() - timelineStart.getTime()) / (1000 * 3600 * 24))
+        } else if (timeframe === 'all') {
+            // Find min date from fetched orders/expenses
+            const dates = [...(orders || []), ...(expenses || [])]
+                .map(x => x.date || x.created_at)
+                .filter(Boolean)
+
+            if (dates.length > 0) {
+                dates.sort() // ascending string sort works for ISO dates
+                timelineStart = new Date(dates[0])
+                daysDiff = Math.ceil((new Date().getTime() - timelineStart.getTime()) / (1000 * 3600 * 24))
+            } else {
+                timelineStart.setDate(timelineStart.getDate() - 30) // fallback
+            }
+        }
+
+        const timeline: string[] = []
+        const d = new Date(timelineStart)
+        const end = new Date()
+
+        // Loop from start to today
+        while (d <= end) {
+            timeline.push(d.toISOString().split('T')[0])
+            d.setDate(d.getDate() + 1)
+        }
 
         // 2.5 Calculate Initial Values (before startDate)
         let initialBalance = 0
