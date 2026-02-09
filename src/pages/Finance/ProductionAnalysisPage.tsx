@@ -6,6 +6,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useNavigate } from 'react-router-dom'
 import { ProductionCostsTab } from './ProductionCostsTab'
+import { toast } from 'sonner'
 
 export default function ProductionAnalysisPage() {
     const navigate = useNavigate()
@@ -23,24 +24,38 @@ export default function ProductionAnalysisPage() {
     const [inventory, setInventory] = useState<any[]>([])
 
     useEffect(() => {
-        fetchProductionStats()
-        fetchProducts()
-        fetchInventory()
+        loadData()
     }, [timeframe])
 
+    const loadData = async () => {
+        setLoading(true)
+        try {
+            await Promise.all([
+                fetchProductionStats(),
+                fetchProducts(),
+                fetchInventory()
+            ])
+        } catch (error: any) {
+            console.error('Error loading data:', error)
+            toast.error('Error al cargar datos', { description: error.message })
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const fetchProducts = async () => {
-        const { data } = await supabase.from('products').select('*').order('name')
+        const { data, error } = await supabase.from('products').select('*').order('name')
+        if (error) throw error
         if (data) setProducts(data)
     }
 
     const fetchInventory = async () => {
-        const { data } = await supabase.from('inventory').select('*')
+        const { data, error } = await supabase.from('inventory').select('*')
+        if (error) throw error
         if (data) setInventory(data)
     }
 
     const fetchProductionStats = async () => {
-        setLoading(true)
-
         // Calculate start date based on timeframe
         let startDate: string | null = null
         const now = new Date()
@@ -61,7 +76,9 @@ export default function ProductionAnalysisPage() {
             ordersQuery = ordersQuery.or(`date.gte.${startDate},created_at.gte.${startDate}`)
         }
 
-        const { data: orders } = await ordersQuery
+        const { data: orders, error } = await ordersQuery
+        if (error) throw error
+
         const realized_orders = orders?.filter(o => o.status !== 'cancelado') || []
 
         // Total Production Cost
@@ -137,7 +154,6 @@ export default function ProductionAnalysisPage() {
         })
 
         setDailyData(historyData)
-        setLoading(false)
     }
 
     if (loading) {
