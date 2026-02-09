@@ -99,30 +99,12 @@ export default function FinancePage() {
 
 
     const fetchProducts = async () => {
-        setDebugLog(prev => prev + '\n[FetchProducts] Iniciando...')
         try {
-            const response = await supabase.from('products').select('*').order('name')
-            const { data, error, status, statusText } = response
-
-            setDebugLog(prev => prev + `\n[FetchProducts] Status: ${status} ${statusText}`)
-
-            if (error) {
-                setDebugLog(prev => prev + `\n[FetchProducts] Error: ${JSON.stringify(error)}`)
-                throw error
-            }
-
-            if (data) {
-                setDebugLog(prev => prev + `\n[FetchProducts] Success. Items: ${data.length}`)
-                if (data.length > 0) {
-                    setDebugLog(prev => prev + `\n[FetchProducts] Sample: ${data[0].name}`)
-                }
-                setProducts(data)
-            } else {
-                setDebugLog(prev => prev + `\n[FetchProducts] Data es null`)
-            }
+            const { data, error } = await supabase.from('products').select('*').order('name')
+            if (error) throw error
+            if (data) setProducts(data)
         } catch (error: any) {
             console.error('Error fetching products:', error)
-            setDebugLog(prev => prev + `\n[FetchProducts] CATCH: ${error.message}`)
             toast.error('Error al cargar productos', { description: error.message })
         }
     }
@@ -640,17 +622,6 @@ export default function FinancePage() {
 
                 <div className="ml-auto flex items-center gap-2">
                     <span className="text-xs text-slate-400">Prod: {products.length} | Inv: {inventory.length}</span>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            console.log('Manual Refresh Triggered');
-                            fetchProducts();
-                            fetchInventory();
-                        }}
-                    >
-                        Refrescar Datos
-                    </Button>
                 </div>
             </div >
 
