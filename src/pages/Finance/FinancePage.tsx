@@ -22,6 +22,7 @@ import { type Transaction, type Client, type FinanceStats } from '@/types/orders
 import { AssetsTab } from './AssetsTab'
 import TagManagerDialog from './TagManagerDialog'
 import { calculateOrderTotal, getAdditionalCostsTotal } from '@/lib/orderUtils'
+import { ProductionCostsTab } from './ProductionCostsTab'
 
 
 function MetricCard({ title, value, trend, icon, subValue, highlight = false }: any) {
@@ -76,6 +77,8 @@ export default function FinancePage() {
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [inventoryValue, setInventoryValue] = useState(0)
     const [clients, setClients] = useState<Client[]>([])
+    const [products, setProducts] = useState<any[]>([])
+    const [inventory, setInventory] = useState<any[]>([])
 
     // Filters State
     const [selectedClient, setSelectedClient] = useState<string>('all')
@@ -141,14 +144,17 @@ export default function FinancePage() {
         expenses?.forEach(e => e.tags?.forEach((t: string) => allTags.add(t)))
         setAvailableTags(Array.from(allTags).sort())
 
-        // Fetch Inventory for Valuation (Current Snapshot)
-        const { data: inventory } = await supabase.from('inventory').select('stock_grams, price_per_kg')
-        const currentInventoryValue = inventory?.reduce((acc, item) => {
+        // Fetch Inventory for Valuation (Current Snapshot) & Analysis
+        const { data: inventoryData } = await supabase.from('inventory').select('*')
+        const currentInventoryValue = inventoryData?.reduce((acc, item) => {
             const kg = (item.stock_grams || 0) / 1000
             const price = item.price_per_kg || 0
             return acc + (kg * price)
         }, 0) || 0
         setInventoryValue(currentInventoryValue)
+
+        // Fetch Products for Cost Analysis
+        const { data: productsData } = await supabase.from('products').select('*').order('name')
 
         // Separate Operational from Capital
         // Separación estricta: Solo 'entregado' es Ingreso Real.
@@ -468,6 +474,8 @@ export default function FinancePage() {
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
         setTransactions(combined)
+        setInventory(inventoryData || [])
+        setProducts(productsData || [])
         setLoading(false)
     }
 
@@ -1041,6 +1049,9 @@ export default function FinancePage() {
                     </div>
                 </TabsContent>
 
+                <TabsContent value="production-costs">
+                    <ProductionCostsTab stats={stats} dailyData={dailyData} products={products} inventory={inventory} />
+                </TabsContent>
                 <TabsContent value="valuation">
                     <AssetsTab cashBalance={stats.balance} inventoryValue={inventoryValue} />
                 </TabsContent>
