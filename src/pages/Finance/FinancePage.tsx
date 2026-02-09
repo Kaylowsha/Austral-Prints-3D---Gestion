@@ -79,6 +79,7 @@ export default function FinancePage() {
     const [clients, setClients] = useState<Client[]>([])
     const [products, setProducts] = useState<any[]>([])
     const [inventory, setInventory] = useState<any[]>([])
+    const [debugLog, setDebugLog] = useState<string>('')
 
     // Filters State
     const [selectedClient, setSelectedClient] = useState<string>('all')
@@ -98,12 +99,30 @@ export default function FinancePage() {
 
 
     const fetchProducts = async () => {
+        setDebugLog(prev => prev + '\n[FetchProducts] Iniciando...')
         try {
-            const { data, error } = await supabase.from('products').select('*').order('name')
-            if (error) throw error
-            if (data) setProducts(data)
+            const response = await supabase.from('products').select('*').order('name')
+            const { data, error, status, statusText } = response
+
+            setDebugLog(prev => prev + `\n[FetchProducts] Status: ${status} ${statusText}`)
+
+            if (error) {
+                setDebugLog(prev => prev + `\n[FetchProducts] Error: ${JSON.stringify(error)}`)
+                throw error
+            }
+
+            if (data) {
+                setDebugLog(prev => prev + `\n[FetchProducts] Success. Items: ${data.length}`)
+                if (data.length > 0) {
+                    setDebugLog(prev => prev + `\n[FetchProducts] Sample: ${data[0].name}`)
+                }
+                setProducts(data)
+            } else {
+                setDebugLog(prev => prev + `\n[FetchProducts] Data es null`)
+            }
         } catch (error: any) {
             console.error('Error fetching products:', error)
+            setDebugLog(prev => prev + `\n[FetchProducts] CATCH: ${error.message}`)
             toast.error('Error al cargar productos', { description: error.message })
         }
     }
@@ -634,6 +653,12 @@ export default function FinancePage() {
                     </Button>
                 </div>
             </div >
+
+            {debugLog && (
+                <div className="bg-slate-900 text-green-400 p-4 rounded-xl text-xs font-mono whitespace-pre-wrap">
+                    {debugLog}
+                </div>
+            )}
 
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-white border text-slate-500">
