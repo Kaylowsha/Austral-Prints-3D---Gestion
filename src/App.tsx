@@ -15,6 +15,7 @@ import AuditPage from '@/pages/AuditPage'
 import QuotationPage from '@/pages/Quotation/QuotationPage'
 import ClientsPage from '@/pages/Clients/ClientsPage'
 import ProductionAnalysisPage from '@/pages/Finance/ProductionAnalysisPage'
+import ReinvestmentPage from '@/pages/Reinvestment/ReinvestmentPage'
 
 // Placeholders to avoid build errors if files missing
 // const OrdersPage = () => <div className="p-4">Pedidos (En construcción)</div>
@@ -58,6 +59,7 @@ function App() {
             <Route path="/quotation" element={<QuotationPage />} />
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/analysis" element={<ProductionAnalysisPage />} />
+            <Route path="/reinvestment" element={<ReinvestmentPage />} />
             <Route path="/audit" element={<AuditPage />} />
           </Route>
         ) : (
