@@ -139,6 +139,9 @@ export function ProductionCostsTab({ stats, dailyData, products = [], inventory 
                         </p>
                     </div>
                     <div className="w-full md:w-[300px]">
+                        <div className="text-[10px] text-right text-slate-400 mb-1">
+                            {products.length} productos disponibles
+                        </div>
                         <Select value={selectedProductId} onValueChange={setSelectedProductId}>
                             <SelectTrigger className="bg-slate-50 border-slate-200 font-bold text-slate-700">
                                 <SelectValue placeholder="Seleccionar producto..." />

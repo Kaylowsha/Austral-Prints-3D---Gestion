@@ -95,15 +95,17 @@ export default function FinancePage() {
         fetchDetailedStats()
     }, [timeframe, selectedClient, selectedTag])
 
-    useEffect(() => {
-        fetchClients()
-        fetchProducts()
-        fetchInventory()
-    }, [])
+
 
     const fetchProducts = async () => {
-        const { data } = await supabase.from('products').select('*').order('name')
-        if (data) setProducts(data)
+        try {
+            const { data, error } = await supabase.from('products').select('*').order('name')
+            if (error) throw error
+            if (data) setProducts(data)
+        } catch (error: any) {
+            console.error('Error fetching products:', error)
+            toast.error('Error al cargar productos', { description: error.message })
+        }
     }
 
     const fetchInventory = async () => {
