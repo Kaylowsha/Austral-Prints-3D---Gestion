@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Wallet, Camera, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import AcquisitionForm from './components/AcquisitionForm'
@@ -12,6 +13,8 @@ export default function ReinvestmentPage() {
         reinvestment: 0
     })
     const [history, setHistory] = useState<any[]>([])
+    const [itemToEdit, setItemToEdit] = useState<any>(null)
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const [refreshTrigger, setRefreshTrigger] = useState(0)
 
     useEffect(() => {
@@ -150,18 +153,31 @@ export default function ReinvestmentPage() {
                                             <p className="text-sm font-black text-slate-900">${item.amount.toLocaleString('es-CL')}</p>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {item.evidence_url ? (
-                                                <a
-                                                    href={getEvidenceUrl(item.evidence_url)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center gap-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+                                            <div className="flex items-center gap-4">
+                                                {item.evidence_url ? (
+                                                    <a
+                                                        href={getEvidenceUrl(item.evidence_url)}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+                                                    >
+                                                        <Camera size={14} /> Boleta
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-xs text-slate-300 italic">Sin boleta</span>
+                                                )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 px-2 text-[10px] font-black uppercase text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                                                    onClick={() => {
+                                                        setItemToEdit(item)
+                                                        setIsEditDialogOpen(true)
+                                                    }}
                                                 >
-                                                    <Camera size={14} /> Ver Boleta
-                                                </a>
-                                            ) : (
-                                                <span className="text-xs text-slate-300 italic">Sin boleta</span>
-                                            )}
+                                                    Editar
+                                                </Button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -177,6 +193,14 @@ export default function ReinvestmentPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Modal de Edición */}
+            <AcquisitionForm
+                itemToEdit={itemToEdit}
+                open={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+                onSuccess={handleSuccess}
+            />
         </div>
     )
 }

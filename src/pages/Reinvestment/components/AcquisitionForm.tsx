@@ -26,10 +26,16 @@ import { cn } from '@/lib/utils'
 
 interface AcquisitionFormProps {
     onSuccess?: () => void
+    itemToEdit?: any
+    open?: boolean
+    onOpenChange?: (open: boolean) => void
 }
 
-export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
-    const [open, setOpen] = useState(false)
+export default function AcquisitionForm({ onSuccess, itemToEdit, open: externalOpen, onOpenChange: setExternalOpen }: AcquisitionFormProps) {
+    const [internalOpen, setInternalOpen] = useState(false)
+    const open = externalOpen !== undefined ? externalOpen : internalOpen
+    const setOpen = setExternalOpen || setInternalOpen
+
     const [loading, setLoading] = useState(false)
     const [inventoryItems, setInventoryItems] = useState<any[]>([])
 
@@ -56,10 +62,25 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
     const [filePreview, setFilePreview] = useState<string | null>(null)
 
     useEffect(() => {
-        if (open && acquisitionType === 'inventory') {
-            fetchInventory()
+        if (open) {
+            if (acquisitionType === 'inventory' && !itemToEdit) {
+                fetchInventory()
+            }
+            if (itemToEdit) {
+                // Pre-populate for edit
+                setAcquisitionType(itemToEdit.category === 'materiales' ? 'inventory' : 'asset')
+                setCapitalSource(itemToEdit.tags?.includes('Reinversión') ? 'reinvestment' : 'investment')
+                setAmount(itemToEdit.amount.toString())
+                setDescription(itemToEdit.description)
+                setFilePreview(itemToEdit.evidence_url ? getPublicUrl(itemToEdit.evidence_url) : null)
+            }
         }
-    }, [open, acquisitionType])
+    }, [open, acquisitionType, itemToEdit])
+
+    const getPublicUrl = (path: string) => {
+        const { data } = supabase.storage.from('evidence').getPublicUrl(path)
+        return data.publicUrl
+    }
 
     const fetchInventory = async () => {
         const { data } = await supabase.from('inventory').select('id, name, brand, color, type').order('name')
@@ -82,8 +103,8 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
     const handleSubmit = async () => {
         setLoading(true)
         try {
-            // 1. Upload Evidence if exists
-            let evidence_url = null
+            // 1. Upload Evidence if exists and is new (file is set)
+            let evidence_url = itemToEdit?.evidence_url || null
             if (file) {
                 const fileExt = file.name.split('.').pop()
                 const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
@@ -97,10 +118,10 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
                 evidence_url = filePath
             }
 
-            // 2. Handle Inventory Update/Creation
+            // 2. Handle Inventory Update/Creation (ONLY in create mode)
             let finalDescription = description
 
-            if (acquisitionType === 'inventory') {
+            if (!itemToEdit && acquisitionType === 'inventory') {
                 if (selectedItemId === 'new') {
                     // Create new item
                     const { error: createError } = await supabase.from('inventory').insert([{
@@ -117,7 +138,6 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
                     finalDescription = `Compra de Material Nuevo: ${newItemDetails.name}`
                 } else {
                     // Update existing item
-                    // First get current stock
                     const { data: currentItem, error: fetchError } = await supabase.from('inventory').select('stock_grams, name').eq('id', selectedItemId).single()
                     if (fetchError) throw fetchError
 
@@ -132,24 +152,35 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
                 }
             }
 
-            // 3. Register Expense
+            // 3. Register or Update Expense
             const tags = [
                 capitalSource === 'reinvestment' ? 'Reinversión' : 'Inversión',
                 acquisitionType === 'inventory' ? 'Materiales' : 'Activo Fijo'
             ]
 
-            const { error: expenseError } = await supabase.from('expenses').insert([{
+            const expenseData = {
                 category: acquisitionType === 'inventory' ? 'materiales' : 'inversion',
                 amount: Number(amount),
-                description: finalDescription || description,
-                date: new Date().toISOString().split('T')[0],
+                description: itemToEdit ? description : (finalDescription || description),
                 tags: tags,
                 evidence_url: evidence_url
-            }])
+            }
 
-            if (expenseError) throw expenseError
+            if (itemToEdit) {
+                const { error: expenseError } = await supabase
+                    .from('expenses')
+                    .update(expenseData)
+                    .eq('id', itemToEdit.id)
+                if (expenseError) throw expenseError
+            } else {
+                const { error: expenseError } = await supabase.from('expenses').insert([{
+                    ...expenseData,
+                    date: new Date().toISOString().split('T')[0]
+                }])
+                if (expenseError) throw expenseError
+            }
 
-            toast.success('Adquisición registrada correctamente')
+            toast.success(itemToEdit ? 'Adquisición actualizada' : 'Adquisición registrada correctamente')
             setOpen(false)
             resetForm()
             if (onSuccess) onSuccess()
@@ -163,36 +194,43 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
     }
 
     const resetForm = () => {
-        setAcquisitionType('inventory')
-        setCapitalSource('reinvestment')
-        setSelectedItemId('new')
-        setAmount('')
-        setDescription('')
-        setQuantityToAdd('')
-        setFile(null)
-        setFilePreview(null)
-        setNewItemDetails({
-            name: '',
-            type: 'Filamento',
-            color: '',
-            brand: '',
-            stock_grams: 1000,
-            price_per_kg: 15000
-        })
+        if (!itemToEdit) {
+            setAcquisitionType('inventory')
+            setCapitalSource('reinvestment')
+            setSelectedItemId('new')
+            setAmount('')
+            setDescription('')
+            setQuantityToAdd('')
+            setFile(null)
+            setFilePreview(null)
+            setNewItemDetails({
+                name: '',
+                type: 'Filamento',
+                color: '',
+                brand: '',
+                stock_grams: 1000,
+                price_per_kg: 15000
+            })
+        }
     }
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button className="bg-slate-900 border-slate-800 text-white hover:bg-slate-800 gap-2 font-bold shadow-lg shadow-slate-200">
-                    <TrendingUp size={18} /> Registrar Inyección
-                </Button>
-            </DialogTrigger>
+        <Dialog open={open} onOpenChange={(val) => {
+            setOpen(val)
+            if (!val) resetForm()
+        }}>
+            {!itemToEdit && (
+                <DialogTrigger asChild>
+                    <Button className="bg-slate-900 border-slate-800 text-white hover:bg-slate-800 gap-2 font-bold shadow-lg shadow-slate-200">
+                        <TrendingUp size={18} /> Registrar Inyección
+                    </Button>
+                </DialogTrigger>
+            )}
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl font-black">Nueva Adquisición</DialogTitle>
+                    <DialogTitle className="text-2xl font-black">{itemToEdit ? 'Editar Registro' : 'Nueva Adquisición'}</DialogTitle>
                     <DialogDescription>
-                        Registra una compra e indica el origen de los fondos.
+                        {itemToEdit ? 'Corrije los datos del registro financiero.' : 'Registra una compra e indica el origen de los fondos.'}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -235,7 +273,8 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
                     <div className="space-y-4 pt-4 border-t border-slate-100">
                         <Label className="uppercase text-xs font-bold text-slate-400">¿Qué estás adquiriendo?</Label>
                         <RadioGroup
-                            defaultValue="inventory"
+                            disabled={!!itemToEdit}
+                            value={acquisitionType}
                             className="flex gap-4"
                             onValueChange={(v) => setAcquisitionType(v as any)}
                         >
@@ -248,38 +287,53 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
                                 <Label htmlFor="r2" className="cursor-pointer">Activo Fijo / Otro (Máquinas, Mejoras)</Label>
                             </div>
                         </RadioGroup>
+                        {itemToEdit && (
+                            <p className="text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-1 rounded">
+                                Nota: Para cambios de stock, usa la sección de Inventario.
+                            </p>
+                        )}
                     </div>
 
                     {/* Dynamic Fields based on Type */}
                     {acquisitionType === 'inventory' ? (
                         <div className="space-y-4 bg-slate-50 p-4 rounded-xl">
-                            <Label>Seleccionar Material</Label>
-                            <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Elegir material..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="new">+ Crear Nuevo Material</SelectItem>
-                                    {inventoryItems.map(item => (
-                                        <SelectItem key={item.id} value={item.id}>
-                                            {item.name} {item.brand ? `(${item.brand})` : ''} - {item.color}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            {!itemToEdit && (
+                                <>
+                                    <Label>Seleccionar Material</Label>
+                                    <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Elegir material..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="new">+ Crear Nuevo Material</SelectItem>
+                                            {inventoryItems.map(item => (
+                                                <SelectItem key={item.id} value={item.id}>
+                                                    {item.name} {item.brand ? `(${item.brand})` : ''} - {item.color}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
 
-                            {selectedItemId === 'new' ? (
-                                <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2">
-                                    <Input placeholder="Nombre (ej: PLA Matte)" value={newItemDetails.name} onChange={e => setNewItemDetails({ ...newItemDetails, name: e.target.value })} />
-                                    <Input placeholder="Marca" value={newItemDetails.brand} onChange={e => setNewItemDetails({ ...newItemDetails, brand: e.target.value })} />
-                                    <Input placeholder="Color" value={newItemDetails.color} onChange={e => setNewItemDetails({ ...newItemDetails, color: e.target.value })} />
-                                    <Input type="number" placeholder="Gramos Iniciales" value={newItemDetails.stock_grams} onChange={e => setNewItemDetails({ ...newItemDetails, stock_grams: Number(e.target.value) })} />
-                                    <Input type="number" placeholder="Precio por Kg ($)" value={newItemDetails.price_per_kg} onChange={e => setNewItemDetails({ ...newItemDetails, price_per_kg: Number(e.target.value) })} />
-                                </div>
-                            ) : (
-                                <div>
-                                    <Label>Cantidad a agregar (gramos)</Label>
-                                    <Input type="number" placeholder="ej: 1000" value={quantityToAdd} onChange={e => setQuantityToAdd(e.target.value)} />
+                                    {selectedItemId === 'new' ? (
+                                        <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2">
+                                            <Input placeholder="Nombre (ej: PLA Matte)" value={newItemDetails.name} onChange={e => setNewItemDetails({ ...newItemDetails, name: e.target.value })} />
+                                            <Input placeholder="Marca" value={newItemDetails.brand} onChange={e => setNewItemDetails({ ...newItemDetails, brand: e.target.value })} />
+                                            <Input placeholder="Color" value={newItemDetails.color} onChange={e => setNewItemDetails({ ...newItemDetails, color: e.target.value })} />
+                                            <Input type="number" placeholder="Gramos Iniciales" value={newItemDetails.stock_grams} onChange={e => setNewItemDetails({ ...newItemDetails, stock_grams: Number(e.target.value) })} />
+                                            <Input type="number" placeholder="Precio por Kg ($)" value={newItemDetails.price_per_kg} onChange={e => setNewItemDetails({ ...newItemDetails, price_per_kg: Number(e.target.value) })} />
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <Label>Cantidad a agregar (gramos)</Label>
+                                            <Input type="number" placeholder="ej: 1000" value={quantityToAdd} onChange={e => setQuantityToAdd(e.target.value)} />
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                            {itemToEdit && (
+                                <div className="space-y-2">
+                                    <Label>Descripción del Material</Label>
+                                    <Input placeholder="Ej: PLA Blanco" value={description} onChange={e => setDescription(e.target.value)} />
                                 </div>
                             )}
                         </div>
@@ -346,7 +400,7 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
                             capitalSource === 'reinvestment' ? "bg-emerald-600 hover:bg-emerald-700" : "bg-indigo-600 hover:bg-indigo-700"
                         )}
                     >
-                        {loading ? 'Registrando...' : `Confirmar ${capitalSource === 'reinvestment' ? 'Reinversión' : 'Inversión'}`}
+                        {loading ? 'Guardando...' : (itemToEdit ? 'Guardar Cambios' : `Confirmar ${capitalSource === 'reinvestment' ? 'Reinversión' : 'Inversión'}`)}
                     </Button>
                 </DialogFooter>
             </DialogContent>
