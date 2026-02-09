@@ -87,11 +87,38 @@ export default function FinancePage() {
 
     useEffect(() => {
         fetchClients()
+        fetchProducts()
+        fetchInventory()
     }, [])
 
     useEffect(() => {
         fetchDetailedStats()
     }, [timeframe, selectedClient, selectedTag])
+
+    useEffect(() => {
+        fetchClients()
+        fetchProducts()
+        fetchInventory()
+    }, [])
+
+    const fetchProducts = async () => {
+        const { data } = await supabase.from('products').select('*').order('name')
+        if (data) setProducts(data)
+    }
+
+    const fetchInventory = async () => {
+        const { data } = await supabase.from('inventory').select('*')
+        if (data) {
+            setInventory(data)
+            // Calculate Value
+            const currentInventoryValue = data.reduce((acc, item) => {
+                const kg = (item.stock_grams || 0) / 1000
+                const price = item.price_per_kg || 0
+                return acc + (kg * price)
+            }, 0)
+            setInventoryValue(currentInventoryValue)
+        }
+    }
 
     const fetchClients = async () => {
         const { data } = await supabase.from('clients').select('*').order('full_name')
@@ -145,16 +172,10 @@ export default function FinancePage() {
         setAvailableTags(Array.from(allTags).sort())
 
         // Fetch Inventory for Valuation (Current Snapshot) & Analysis
-        const { data: inventoryData } = await supabase.from('inventory').select('*')
-        const currentInventoryValue = inventoryData?.reduce((acc, item) => {
-            const kg = (item.stock_grams || 0) / 1000
-            const price = item.price_per_kg || 0
-            return acc + (kg * price)
-        }, 0) || 0
-        setInventoryValue(currentInventoryValue)
+        // Moved to standalone fetchInventory() called on mount
 
         // Fetch Products for Cost Analysis
-        const { data: productsData } = await supabase.from('products').select('*').order('name')
+        // Moved to standalone fetchProducts() called on mount
 
         // Separate Operational from Capital
         // Separación estricta: Solo 'entregado' es Ingreso Real.
@@ -474,8 +495,6 @@ export default function FinancePage() {
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
         setTransactions(combined)
-        setInventory(inventoryData || [])
-        setProducts(productsData || [])
         setLoading(false)
     }
 
