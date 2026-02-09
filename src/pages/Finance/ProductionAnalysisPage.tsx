@@ -19,10 +19,24 @@ export default function ProductionAnalysisPage() {
         total_hours: 0
     })
     const [dailyData, setDailyData] = useState<any[]>([])
+    const [products, setProducts] = useState<any[]>([])
+    const [inventory, setInventory] = useState<any[]>([])
 
     useEffect(() => {
         fetchProductionStats()
+        fetchProducts()
+        fetchInventory()
     }, [timeframe])
+
+    const fetchProducts = async () => {
+        const { data } = await supabase.from('products').select('*').order('name')
+        if (data) setProducts(data)
+    }
+
+    const fetchInventory = async () => {
+        const { data } = await supabase.from('inventory').select('*')
+        if (data) setInventory(data)
+    }
 
     const fetchProductionStats = async () => {
         setLoading(true)
@@ -179,7 +193,7 @@ export default function ProductionAnalysisPage() {
             </header>
 
             {/* Direct Cost Analysis Content */}
-            <ProductionCostsTab stats={stats} dailyData={dailyData} />
+            <ProductionCostsTab stats={stats} dailyData={dailyData} products={products} inventory={inventory} />
         </div>
     )
 }

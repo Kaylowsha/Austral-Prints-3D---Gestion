@@ -79,7 +79,7 @@ export default function FinancePage() {
     const [clients, setClients] = useState<Client[]>([])
     const [products, setProducts] = useState<any[]>([])
     const [inventory, setInventory] = useState<any[]>([])
-    const [debugLog, setDebugLog] = useState<string>('')
+
 
     // Filters State
     const [selectedClient, setSelectedClient] = useState<string>('all')
@@ -654,11 +654,7 @@ export default function FinancePage() {
                 </div>
             </div >
 
-            {debugLog && (
-                <div className="bg-slate-900 text-green-400 p-4 rounded-xl text-xs font-mono whitespace-pre-wrap">
-                    {debugLog}
-                </div>
-            )}
+
 
             <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-white border text-slate-500">
