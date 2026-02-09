@@ -21,7 +21,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
-import { TrendingUp, Briefcase } from 'lucide-react'
+import { TrendingUp, Briefcase, Camera, X, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface AcquisitionFormProps {
@@ -52,6 +52,8 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
     const [amount, setAmount] = useState('') // Costo total
     const [description, setDescription] = useState('')
     const [quantityToAdd, setQuantityToAdd] = useState('') // Grams or Units
+    const [file, setFile] = useState<File | null>(null)
+    const [filePreview, setFilePreview] = useState<string | null>(null)
 
     useEffect(() => {
         if (open && acquisitionType === 'inventory') {
@@ -64,10 +66,38 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
         if (data) setInventoryItems(data)
     }
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const selectedFile = e.target.files[0]
+            setFile(selectedFile)
+            setFilePreview(URL.createObjectURL(selectedFile))
+        }
+    }
+
+    const removeFile = () => {
+        setFile(null)
+        setFilePreview(null)
+    }
+
     const handleSubmit = async () => {
         setLoading(true)
         try {
-            // 1. Handle Inventory Update/Creation
+            // 1. Upload Evidence if exists
+            let evidence_url = null
+            if (file) {
+                const fileExt = file.name.split('.').pop()
+                const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`
+                const filePath = `receipts/${fileName}`
+
+                const { error: uploadError } = await supabase.storage
+                    .from('evidence')
+                    .upload(filePath, file)
+
+                if (uploadError) throw uploadError
+                evidence_url = filePath
+            }
+
+            // 2. Handle Inventory Update/Creation
             let finalDescription = description
 
             if (acquisitionType === 'inventory') {
@@ -102,7 +132,7 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
                 }
             }
 
-            // 2. Register Expense
+            // 3. Register Expense
             const tags = [
                 capitalSource === 'reinvestment' ? 'Reinversión' : 'Inversión',
                 acquisitionType === 'inventory' ? 'Materiales' : 'Activo Fijo'
@@ -113,7 +143,8 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
                 amount: Number(amount),
                 description: finalDescription || description,
                 date: new Date().toISOString().split('T')[0],
-                tags: tags
+                tags: tags,
+                evidence_url: evidence_url
             }])
 
             if (expenseError) throw expenseError
@@ -138,6 +169,8 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
         setAmount('')
         setDescription('')
         setQuantityToAdd('')
+        setFile(null)
+        setFilePreview(null)
         setNewItemDetails({
             name: '',
             type: 'Filamento',
@@ -256,6 +289,46 @@ export default function AcquisitionForm({ onSuccess }: AcquisitionFormProps) {
                             <Input placeholder="Ej: Impresora Bambu Lab A1" value={description} onChange={e => setDescription(e.target.value)} />
                         </div>
                     )}
+
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <Label className="uppercase text-xs font-bold text-slate-400">Evidencia (Boleta / Recibo)</Label>
+                        {!filePreview ? (
+                            <div
+                                className="border-2 border-dashed border-slate-200 rounded-xl p-6 flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition-colors cursor-pointer relative"
+                                onClick={() => document.getElementById('evidence-upload')?.click()}
+                            >
+                                <Camera className="text-slate-400" size={32} />
+                                <p className="text-sm font-bold text-slate-500">Subir foto de boleta</p>
+                                <p className="text-[10px] text-slate-400 uppercase font-black">PNG, JPG, PDF</p>
+                                <input
+                                    id="evidence-upload"
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*,application/pdf"
+                                    onChange={handleFileChange}
+                                />
+                            </div>
+                        ) : (
+                            <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-2 group">
+                                <div className="flex items-center gap-3">
+                                    {file?.type.includes('image') ? (
+                                        <img src={filePreview} alt="Preview" className="w-12 h-12 rounded-lg object-cover" />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                            <FileText size={24} />
+                                        </div>
+                                    )}
+                                    <div className="flex-1 overflow-hidden">
+                                        <p className="text-sm font-bold text-slate-700 truncate">{file?.name}</p>
+                                        <p className="text-xs text-slate-500 font-medium">{(file?.size || 0 / 1024).toFixed(1)} KB</p>
+                                    </div>
+                                    <Button size="icon" variant="ghost" className="text-slate-400 hover:text-rose-500" onClick={removeFile}>
+                                        <X size={18} />
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="space-y-2">
                         <Label>Costo Total ($)</Label>

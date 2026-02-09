@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Wallet } from 'lucide-react'
+import { Wallet, Camera, FileText } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import AcquisitionForm from './components/AcquisitionForm'
 import CapitalGrowthChart from './components/CapitalGrowthChart'
 import { supabase } from '@/lib/supabase'
@@ -10,10 +11,12 @@ export default function ReinvestmentPage() {
         investment: 0,
         reinvestment: 0
     })
+    const [history, setHistory] = useState<any[]>([])
     const [refreshTrigger, setRefreshTrigger] = useState(0)
 
     useEffect(() => {
         fetchStats()
+        fetchHistory()
     }, [refreshTrigger])
 
     const fetchStats = async () => {
@@ -33,8 +36,24 @@ export default function ReinvestmentPage() {
         }
     }
 
+    const fetchHistory = async () => {
+        const { data } = await supabase
+            .from('expenses')
+            .select('*')
+            .or('tags.cs.{Inversión},tags.cs.{Reinversión}')
+            .order('date', { ascending: false })
+            .limit(10)
+
+        if (data) setHistory(data)
+    }
+
     const handleSuccess = () => {
         setRefreshTrigger(prev => prev + 1)
+    }
+
+    const getEvidenceUrl = (path: string) => {
+        const { data } = supabase.storage.from('evidence').getPublicUrl(path)
+        return data.publicUrl
     }
 
     return (
@@ -76,10 +95,88 @@ export default function ReinvestmentPage() {
                 </Card>
 
                 {/* Growth Chart */}
-                <div key={refreshTrigger}> {/* Force re-render on update */}
+                <div key={refreshTrigger}>
                     <CapitalGrowthChart />
                 </div>
             </div>
+
+            {/* History Table */}
+            <Card className="border-slate-200 shadow-sm overflow-hidden">
+                <CardHeader className="bg-white border-b">
+                    <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <FileText className="text-indigo-500" size={20} />
+                        Historial de Adquisiciones
+                    </CardTitle>
+                    <CardDescription>Últimos movimientos registrados de inversión y reinversión.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b">
+                                    <th className="px-6 py-4 px-6">Fecha</th>
+                                    <th className="px-6 py-4">Concepto</th>
+                                    <th className="px-6 py-4">Tipo</th>
+                                    <th className="px-6 py-4">Costo</th>
+                                    <th className="px-6 py-4">Evidencia</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {history.map((item) => (
+                                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                                        <td className="px-6 py-4 text-sm font-medium text-slate-500">
+                                            {new Date(item.date).toLocaleDateString('es-CL')}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-sm font-bold text-slate-800">{item.description}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex gap-1">
+                                                {item.tags?.map((tag: string) => (
+                                                    <span
+                                                        key={tag}
+                                                        className={cn(
+                                                            "text-[9px] font-black px-2 py-0.5 rounded uppercase",
+                                                            tag === 'Reinversión' ? "bg-emerald-100 text-emerald-700" :
+                                                                tag === 'Inversión' ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
+                                                        )}
+                                                    >
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-sm font-black text-slate-900">${item.amount.toLocaleString('es-CL')}</p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {item.evidence_url ? (
+                                                <a
+                                                    href={getEvidenceUrl(item.evidence_url)}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+                                                >
+                                                    <Camera size={14} /> Ver Boleta
+                                                </a>
+                                            ) : (
+                                                <span className="text-xs text-slate-300 italic">Sin boleta</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {history.length === 0 && (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">
+                                            No hay registros aún.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     )
 }
