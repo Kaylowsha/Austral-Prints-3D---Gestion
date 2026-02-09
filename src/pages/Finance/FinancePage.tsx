@@ -618,6 +618,21 @@ export default function FinancePage() {
                         </Button>
                     )
                 }
+
+                <div className="ml-auto flex items-center gap-2">
+                    <span className="text-xs text-slate-400">Prod: {products.length} | Inv: {inventory.length}</span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            console.log('Manual Refresh Triggered');
+                            fetchProducts();
+                            fetchInventory();
+                        }}
+                    >
+                        Refrescar Datos
+                    </Button>
+                </div>
             </div >
 
             <Tabs defaultValue="overview" className="space-y-6">
