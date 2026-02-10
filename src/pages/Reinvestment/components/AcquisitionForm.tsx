@@ -316,9 +316,9 @@ export default function AcquisitionForm({ onSuccess, itemToEdit, open: externalO
 
                                     {selectedItemId === 'new' ? (
                                         <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2">
-                                            <Input placeholder="Nombre (ej: PLA Matte)" value={newItemDetails.name} onChange={e => setNewItemDetails({ ...newItemDetails, name: e.target.value })} />
+                                            <Input placeholder="Nombre (ej: PLA Genérico)" value={newItemDetails.name} onChange={e => setNewItemDetails({ ...newItemDetails, name: e.target.value })} />
                                             <Input placeholder="Marca" value={newItemDetails.brand} onChange={e => setNewItemDetails({ ...newItemDetails, brand: e.target.value })} />
-                                            <Input placeholder="Color" value={newItemDetails.color} onChange={e => setNewItemDetails({ ...newItemDetails, color: e.target.value })} />
+                                            <Input placeholder="Color (Opcional)" value={newItemDetails.color} onChange={e => setNewItemDetails({ ...newItemDetails, color: e.target.value })} />
                                             <Input type="number" placeholder="Gramos Iniciales" value={newItemDetails.stock_grams} onChange={e => setNewItemDetails({ ...newItemDetails, stock_grams: Number(e.target.value) })} />
                                             <Input type="number" placeholder="Precio por Kg ($)" value={newItemDetails.price_per_kg} onChange={e => setNewItemDetails({ ...newItemDetails, price_per_kg: Number(e.target.value) })} />
                                         </div>

@@ -220,8 +220,8 @@ export default function InventoryPage() {
                                         </div>
                                         {(formData.type === 'Filamento' || formData.type === 'Resina') && (
                                             <div className="grid gap-2">
-                                                <Label>Color</Label>
-                                                <Input required value={formData.color} onChange={e => setFormData({ ...formData, color: e.target.value })} />
+                                                <Label>Color (Opcional)</Label>
+                                                <Input value={formData.color} onChange={e => setFormData({ ...formData, color: e.target.value })} />
                                             </div>
                                         )}
                                     </div>
