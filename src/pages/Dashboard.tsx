@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { History, TrendingUp, TrendingDown } from 'lucide-react'
 import IncomeDialog from './Finance/IncomeDialog'
 import ExpenseDialog from './Finance/ExpenseDialog'
-import { calculateOrderTotal } from '@/lib/orderUtils'
+import { calculateOrderTotal, calculateFinanceStats } from '@/lib/orderUtils'
 
 export default function Dashboard() {
     const [user, setUser] = useState<any>(null)
@@ -42,58 +42,31 @@ export default function Dashboard() {
     }
 
     const fetchFinancials = async () => {
-        // 1. Fetch Orders (Recent for history)
-        const { data: orders } = await supabase
-            .from('orders')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(10)
+        // 1. Fetch all orders and expenses for stats
+        const { data: allOrders } = await supabase.from('orders').select('*')
+        const { data: allExpensesData } = await supabase.from('expenses').select('*')
 
-        // 2. Fetch Expenses (Recent for history)
-        const { data: expenses } = await supabase
-            .from('expenses')
-            .select('*')
-            .order('date', { ascending: false })
-            .limit(10)
-
-        // 3. Totals for cards (Filter by status)
-        const { data: allOrders } = await supabase.from('orders').select('price, cost, status, product_id, quantity').gt('price', 0)
-
-        const realizedOrders = allOrders?.filter(o => ['entregado'].includes(o.status)) || []
-        const pendingOrders = allOrders?.filter(o => ['pendiente', 'en_proceso', 'terminado'].includes(o.status)) || []
-
-        const realTotalIncome = realizedOrders
-            .filter(o => o.product_id || (o as any).description !== 'Inyección de Capital')
-            .reduce((acc, curr) => acc + calculateOrderTotal(curr), 0) || 0
-        const realTotalCost = realizedOrders.reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
-
-        // Floating: All pending orders
-        const floatingIncome = pendingOrders.reduce((acc, curr) => acc + calculateOrderTotal(curr), 0) || 0
-
-        const { data: allExpensesData } = await supabase.from('expenses').select('amount, category')
-        const realTotalExpenses = allExpensesData?.filter(e => !['retiro', 'inversion'].includes(e.category)).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
-        const totalInversions = allExpensesData?.filter(e => e.category === 'inversion').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
-        const totalWithdrawals = allExpensesData?.filter(e => e.category === 'retiro').reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
-
-        const netProfit = realTotalIncome - realTotalExpenses - realTotalCost
-
-        // Injections: Only explicit Capital Injections
-        const totalInjections = realizedOrders
-            .filter(o => !o.product_id && (o as any).description === 'Inyección de Capital')
-            .reduce((acc, curr) => acc + calculateOrderTotal(curr), 0) || 0
-
-        const finalBalance = netProfit + totalInjections - totalInversions - totalWithdrawals
+        // 2. Calculate stats using centralized function
+        const stats = calculateFinanceStats(allOrders || [], allExpensesData || [])
 
         setFinancials({
-            income: realTotalIncome,
-            expenses: realTotalExpenses,
-            production_cost: realTotalCost,
-            balance: finalBalance,
-            floating: floatingIncome
+            income: stats.income,
+            expenses: stats.expenses,
+            production_cost: stats.production_cost,
+            balance: stats.balance,
+            floating: stats.floating
         })
 
-        // Merge for History
-        const incomeItems = (orders || []).map(o => ({
+        // 3. Build history from recent items
+        const recentOrders = [...(allOrders || [])]
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 10)
+
+        const recentExpenses = [...(allExpensesData || [])]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(0, 10)
+
+        const incomeItems = recentOrders.map(o => ({
             id: o.id,
             type: 'income',
             amount: calculateOrderTotal(o),
@@ -103,7 +76,7 @@ export default function Dashboard() {
             icon: TrendingUp
         }))
 
-        const expenseItems = (expenses || []).map(e => ({
+        const expenseItems = recentExpenses.map(e => ({
             id: e.id,
             type: 'expense',
             amount: e.amount,

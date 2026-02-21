@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select"
 import { supabase } from '@/lib/supabase'
 import { logAuditAction } from '@/lib/audit'
+import { estimateProductionCost } from '@/lib/orderUtils'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -32,6 +33,7 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
     const [open, setOpen] = useState(false)
     const [loading, setLoading] = useState(false)
     const [products, setProducts] = useState<any[]>([])
+    const [avgMaterialPrice, setAvgMaterialPrice] = useState(0)
 
     const [formData, setFormData] = useState({
         product_id: '',
@@ -46,8 +48,21 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
     useEffect(() => {
         if (open) {
             fetchProducts()
+            fetchAvgMaterialPrice()
         }
     }, [open])
+
+    const fetchAvgMaterialPrice = async () => {
+        const { data } = await supabase
+            .from('inventory')
+            .select('price_per_kg')
+            .eq('type', 'Filamento')
+            .gt('price_per_kg', 0)
+        if (data && data.length > 0) {
+            const avg = data.reduce((sum, i) => sum + (i.price_per_kg || 0), 0) / data.length
+            setAvgMaterialPrice(avg)
+        }
+    }
 
     const fetchProducts = async () => {
         const { data } = await supabase.from('products').select('*').order('name')
@@ -71,10 +86,11 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
         setLoading(true)
 
         try {
-            // Calculate Cost
+            // Calculate Cost using real material price from inventory
             const selectedProduct = products.find(p => p.id === formData.product_id)
             const weight = selectedProduct?.weight_grams || 0
-            const estimatedCost = weight * 20
+            const materialPrice = avgMaterialPrice > 0 ? avgMaterialPrice : 15000
+            const estimatedCost = estimateProductionCost(weight, materialPrice)
 
             // 1. Create the Order (Income)
             const { data, error } = await supabase.from('orders').insert([

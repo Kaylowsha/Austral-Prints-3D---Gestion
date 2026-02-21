@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select"
 import { supabase } from '@/lib/supabase'
 import { logAuditAction } from '@/lib/audit'
+import { estimateProductionCost } from '@/lib/orderUtils'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import TagSelector from '@/components/TagSelector'
@@ -99,17 +100,13 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
         setLoading(true)
 
         try {
-            // Calculate Cost based on product weight
+            // Calculate Cost based on product weight and real material price
             const selectedProduct = products.find(p => p.id === formData.product_id)
+            const selectedMaterial = inventory.find(i => i.id === formData.inventory_id)
             const weight = selectedProduct?.weight_grams || 0
             const hours = selectedProduct?.estimated_hours || 0
             const mins = selectedProduct?.estimated_mins || 0
-            const materialPrice = 15000 // Default material price if not specified
-
-
-            const estimatedCost = (weight * (materialPrice / 1000))
-            // itemsCost is NOT added here because it is stored in inventory_items 
-            // and added dynamically in FinancePage via getAdditionalCostsTotal
+            const materialPrice = selectedMaterial?.price_per_kg || 15000
 
             const { data, error } = await supabase.from('orders').insert([
                 {
@@ -119,7 +116,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     inventory_id: formData.inventory_id || null, // Link to specific filament
                     description: formData.description,
                     price: Number(formData.price),
-                    cost: estimatedCost * Number(formData.quantity || 1),
+                    cost: estimateProductionCost(weight, materialPrice, Number(formData.quantity || 1)),
                     quantity: Number(formData.quantity || 1),
                     deadline: formData.deadline || null,
                     status: 'pendiente',
@@ -128,7 +125,7 @@ export default function OrderDialog({ onSuccess }: OrderDialogProps) {
                     quoted_grams: weight,
                     quoted_hours: hours,
                     quoted_mins: mins,
-                    quoted_material_price: materialPrice,
+                    quoted_material_price: selectedMaterial?.price_per_kg || materialPrice,
                     additional_costs: formData.additional_costs,
                     inventory_items: formData.inventory_items,
                     created_at: new Date().toISOString()

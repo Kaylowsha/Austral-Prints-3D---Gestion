@@ -318,7 +318,6 @@ export default function FinancePage() {
 
         if (startDate) {
             // Fetch everything BEFORE startDate to set initial state
-            // Note: This matches the filters (Client/Tag) to be consistent
             let prevOrdersQuery = supabase.from('orders').select('*').lt('date', startDate)
             let prevExpensesQuery = supabase.from('expenses').select('*').lt('date', startDate)
 
@@ -331,56 +330,24 @@ export default function FinancePage() {
             const { data: prevOrders } = await prevOrdersQuery
             const { data: prevExpenses } = await prevExpensesQuery
 
-            // Re-calculating initialBalance strictly following daily logic:
+            // Single-pass calculation: matches daily logic (dayNet = income - opExpense - prodCost + injections - withdrawals)
             prevOrders?.forEach(o => {
-                if (['entregado'].includes(o.status)) {
-                    // Operational Income
+                if (o.status === 'entregado') {
+                    // Operational Income (sales, not capital injections)
                     if (o.product_id || o.description !== 'Inyección de Capital') {
                         initialBalance += calculateOrderTotal(o)
+                        initialIngresos += calculateOrderTotal(o)
+                        initialSugerido += ((o.suggested_price || o.price || 0) * (o.quantity || 1)) + getAdditionalCostsTotal(o)
                     }
                     // Capital Injection
                     if (!o.product_id && o.description === 'Inyección de Capital') {
                         initialBalance += calculateOrderTotal(o)
                     }
-                }
-            })
-            prevExpenses?.forEach(e => {
-                initialBalance -= (e.amount || 0)
-            })
-
-            // Add operational income/cost to balance
-            // Income
-            prevOrders?.forEach(o => {
-                if (['entregado'].includes(o.status) && (o.product_id || o.description !== 'Inyección de Capital')) {
-                    initialBalance += calculateOrderTotal(o)
-                }
-            })
-            // Costs? NO. Balance is Income - Expenses. 
-            // In this strict cash flow view: Balance = (Sales + Injections) - (Expenses + Withdrawals + Inversions)
-            // It does NOT subtract "Internal Production Cost" because that's not a cash outflow (technically material purchase is the outflow)
-            // BUT, the chart shows "Balance en Caja".
-            // If we follow the "Cash Flow" definition: initialBalance is correct as (Income - Expense).
-            // However, the chart shows `balance` which in the code (line 331) subtracts `dayProdCost_Total`?!
-            // Wait, line 305: dayNet = Income - OpExpense - ProdCost + Injections - Withdrawals.
-            // Using "ProdCost" (Consumption) as a proxy for Cash Outflow is an approximation if we don't track raw material purchases.
-            // If the user tracks "Expenses" (Category: Material), then subtracting ProdCost double counts!
-            // Let's assume the user DOES NOT track material purchases as expenses, but relies on "Cost" to estimate outflow.
-
-            // Re-calculating initialBalance strictly following daily logic:
-            prevOrders?.forEach(o => {
-                if (['entregado'].includes(o.status)) {
-                    // Operational Income
-                    if (o.product_id || o.description !== 'Inyección de Capital') {
-                        initialBalance += calculateOrderTotal(o)
-                    }
-                    // Production Cost (Proxy for outflow)
-                    if (o.status !== 'cancelado') {
-                        initialBalance -= ((o.cost || 0) + getAdditionalCostsTotal(o))
-                    }
-                    // Capital Injection
-                    if (!o.product_id && o.description === 'Inyección de Capital') {
-                        initialBalance += calculateOrderTotal(o)
-                    }
+                    // Production Cost
+                    const orderProdCost = (o.cost || 0) + getAdditionalCostsTotal(o)
+                    initialBalance -= orderProdCost
+                    initialCosto += (o.cost || 0)
+                    initialCostoTotal += orderProdCost
                 }
             })
             prevExpenses?.forEach(e => {
@@ -405,17 +372,17 @@ export default function FinancePage() {
 
             // 3. Costos de Producción (Directos: Filamento + Energía)
             // Lógica Ajustada: Solo de lo entregado
-            const dayProdCost_Pure = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado' && o.status !== 'cancelado')
+            const dayProdCost_Pure = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado')
                 .reduce((acc, curr) => acc + (curr.cost || 0), 0) || 0
 
-            const dayAdditionalCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado' && o.status !== 'cancelado')
+            const dayAdditionalCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado')
                 .reduce((acc, curr) => acc + getAdditionalCostsTotal(curr), 0) || 0
 
             // 4. Costo Total (Directo + Adicionales)
             const dayProdCost_Total = dayProdCost_Pure + dayAdditionalCost
 
             // Desglose Material vs Energía (Solo sobre el Costo Puro)
-            const dayMaterialCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado' && o.status !== 'cancelado')
+            const dayMaterialCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado')
                 .reduce((acc, curr) => {
                     if (curr.quoted_grams && curr.quoted_material_price) {
                         return acc + ((curr.quoted_grams * (curr.quoted_material_price / 1000)) * (curr.quantity || 1))
@@ -433,14 +400,16 @@ export default function FinancePage() {
 
 
             // Movimientos de Capital
-            const dayInjections = (realized_orders.filter(o => !o.product_id && o.description === 'Inyección de Capital' && (o.date || o.created_at).startsWith(date)).reduce((acc, curr) => acc + calculateOrderTotal(curr), 0) || 0) +
-                (expenses?.filter(e => e.category === 'inversion' && e.date === date).reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0)
+            const dayInjections = realized_orders.filter(o => !o.product_id && o.description === 'Inyección de Capital' && (o.date || o.created_at).startsWith(date)).reduce((acc, curr) => acc + calculateOrderTotal(curr), 0) || 0
+
+            const dayInversions = expenses?.filter(e => e.category === 'inversion' && e.date === date)
+                .reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
             const dayWithdrawals = expenses?.filter(e => e.category === 'retiro' && e.date === date)
                 .reduce((acc, curr) => acc + (curr.amount || 0), 0) || 0
 
 
-            const dayNet = dayOpIncome - dayOpExpense - dayProdCost_Total + dayInjections - dayWithdrawals
+            const dayNet = dayOpIncome - dayOpExpense - dayProdCost_Total + dayInjections - dayInversions - dayWithdrawals
 
             // Accumulate values
             runningBalance += dayNet
