@@ -23,6 +23,7 @@ import { AssetsTab } from './AssetsTab'
 import TagManagerDialog from './TagManagerDialog'
 import { calculateOrderTotal, getAdditionalCostsTotal } from '@/lib/orderUtils'
 import { ProductionCostsTab } from './ProductionCostsTab'
+import ReinvestmentPage from '../Reinvestment/ReinvestmentPage'
 
 
 function MetricCard({ title, value, trend, icon, subValue, highlight = false }: any) {
@@ -597,8 +598,10 @@ export default function FinancePage() {
 
 
             <Tabs defaultValue="overview" className="space-y-6">
-                <TabsList className="bg-white border text-slate-500">
+                <TabsList className="bg-white border text-slate-500 flex-wrap">
                     <TabsTrigger value="overview" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Resumen</TabsTrigger>
+                    <TabsTrigger value="production-costs" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Costos</TabsTrigger>
+                    <TabsTrigger value="reinvestment" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Reinversión</TabsTrigger>
                     <TabsTrigger value="valuation" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">Valuación</TabsTrigger>
                 </TabsList>
 
@@ -1048,6 +1051,9 @@ export default function FinancePage() {
 
                 <TabsContent value="production-costs">
                     <ProductionCostsTab stats={stats} dailyData={dailyData} products={products} inventory={inventory} />
+                </TabsContent>
+                <TabsContent value="reinvestment">
+                    <ReinvestmentPage />
                 </TabsContent>
                 <TabsContent value="valuation">
                     <AssetsTab cashBalance={stats.balance} inventoryValue={inventoryValue} />
