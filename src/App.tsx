@@ -15,6 +15,7 @@ import InventoryPage from '@/pages/Inventory/InventoryPage'
 import AuditPage from '@/pages/AuditPage'
 import QuotationPage from '@/pages/Quotation/QuotationPage'
 import ClientsPage from '@/pages/Clients/ClientsPage'
+import UpdatePrompt from '@/components/UpdatePrompt'
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
@@ -73,6 +74,7 @@ function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         )}
       </Routes>
+      <UpdatePrompt />
       <Toaster />
     </Router>
   )
