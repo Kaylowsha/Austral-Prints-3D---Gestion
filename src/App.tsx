@@ -2,6 +2,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { useState, useEffect } from 'react'
 import Login from '@/pages/Login'
+import ResetPassword from '@/pages/ResetPassword'
 import Dashboard from '@/pages/Dashboard'
 import { supabase } from '@/lib/supabase'
 import type { Session } from '@supabase/supabase-js'
@@ -14,14 +15,11 @@ import InventoryPage from '@/pages/Inventory/InventoryPage'
 import AuditPage from '@/pages/AuditPage'
 import QuotationPage from '@/pages/Quotation/QuotationPage'
 import ClientsPage from '@/pages/Clients/ClientsPage'
-// ProductionAnalysis and Reinvestment are now tabs inside FinancePage
-
-// Placeholders to avoid build errors if files missing
-// const OrdersPage = () => <div className="p-4">Pedidos (En construcción)</div>
 
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isRecovery, setIsRecovery] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -31,8 +29,11 @@ function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -40,6 +41,15 @@ function App() {
 
   if (loading) {
     return <div className="h-screen flex items-center justify-center">Cargando...</div>
+  }
+
+  if (isRecovery && session) {
+    return (
+      <>
+        <ResetPassword onComplete={() => setIsRecovery(false)} />
+        <Toaster />
+      </>
+    )
   }
 
   return (
