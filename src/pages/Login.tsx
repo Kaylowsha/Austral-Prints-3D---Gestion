@@ -51,9 +51,7 @@ export default function Login() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
             <Card className="w-full max-w-md shadow-lg border-0 bg-white/90 backdrop-blur">
                 <CardHeader className="text-center space-y-2">
-                    <div className="mx-auto w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                    </div>
+                    <img src="./logo.png" alt="Austral Prints 3D" className="mx-auto h-20 object-contain mb-4" />
                     <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Austral Prints 3D</CardTitle>
                     <CardDescription className="text-slate-500">Gestión de Impresión 3D</CardDescription>
                 </CardHeader>
