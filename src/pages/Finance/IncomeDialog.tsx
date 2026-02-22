@@ -37,9 +37,10 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
 
     const [formData, setFormData] = useState({
         product_id: '',
+        concept: '',
         description: '',
         price: '',
-        quantity: '1', // Assuming 1 by default
+        quantity: '1',
         date: new Date().toISOString().split('T')[0],
         mode: 'producto' as 'producto' | 'manual'
     })
@@ -75,7 +76,7 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
             setFormData({
                 ...formData,
                 product_id: productId,
-                description: product.name, // Auto-fill description
+                description: product.name,
                 price: product.base_price.toString() // Auto-fill price
             })
         }
@@ -96,7 +97,9 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
             const { data, error } = await supabase.from('orders').insert([
                 {
                     product_id: formData.mode === 'producto' ? formData.product_id : null,
-                    description: formData.description,
+                    description: formData.mode === 'manual' && formData.concept
+                        ? (formData.description ? `${formData.concept} - ${formData.description}` : formData.concept)
+                        : formData.description,
                     price: Number(formData.price),
                     cost: formData.mode === 'producto' ? estimatedCost * Number(formData.quantity || 1) : 0,
                     quantity: Number(formData.quantity || 1),
@@ -122,6 +125,7 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
             setOpen(false)
             setFormData({
                 product_id: '',
+                concept: '',
                 description: '',
                 price: '',
                 quantity: '1',
@@ -195,8 +199,8 @@ export default function IncomeDialog({ onSuccess }: IncomeDialogProps) {
                         <div className="grid gap-2">
                             <Label>Concepto de Ingreso</Label>
                             <Select
-                                onValueChange={(val) => setFormData({ ...formData, description: val })}
-                                value={formData.description}
+                                onValueChange={(val) => setFormData({ ...formData, concept: val })}
+                                value={formData.concept}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Selecciona tipo de ingreso..." />

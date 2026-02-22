@@ -7,7 +7,11 @@ import AcquisitionForm from './components/AcquisitionForm'
 import CapitalGrowthChart from './components/CapitalGrowthChart'
 import { supabase } from '@/lib/supabase'
 
-export default function ReinvestmentPage() {
+interface ReinvestmentPageProps {
+    embedded?: boolean
+}
+
+export default function ReinvestmentPage({ embedded = false }: ReinvestmentPageProps) {
     const [stats, setStats] = useState({
         investment: 0,
         reinvestment: 0
@@ -60,17 +64,19 @@ export default function ReinvestmentPage() {
     }
 
     return (
-        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-24 bg-slate-50/50 min-h-screen">
+        <div className={cn(embedded ? "space-y-6" : "p-4 md:p-8 max-w-7xl mx-auto space-y-8 pb-24 bg-slate-50/50 min-h-screen")}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Growth Engine</span>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Reinversión</h1>
+                {!embedded && (
+                    <div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Growth Engine</span>
+                            <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Reinversión</h1>
+                        </div>
+                        <p className="text-slate-500 font-medium max-w-2xl">
+                            Gestiona el crecimiento de tu capital. Registra adquisiciones y analiza cuánto del negocio se está construyendo con sus propias ganancias.
+                        </p>
                     </div>
-                    <p className="text-slate-500 font-medium max-w-2xl">
-                        Gestiona el crecimiento de tu capital. Registra adquisiciones y analiza cuánto del negocio se está construyendo con sus propias ganancias.
-                    </p>
-                </div>
+                )}
                 <AcquisitionForm onSuccess={handleSuccess} />
             </div>
 

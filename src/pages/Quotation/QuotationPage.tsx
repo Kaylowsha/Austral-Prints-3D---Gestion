@@ -75,7 +75,7 @@ const QuotationPage = () => {
     const [quotationMode, setQuotationMode] = useState<'custom' | 'product'>('custom');
     const [selectedProductId, setSelectedProductId] = useState<string>('');
     const [searchProduct, setSearchProduct] = useState('');
-    const [quantity, setQuantity] = useState(0);
+    const [quantity, setQuantity] = useState(1);
 
     const [selectedMaterialId, setSelectedMaterialId] = useState<string>('');
     const [project, setProject] = useState<ProjectData>({

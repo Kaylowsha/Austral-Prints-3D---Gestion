@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import {
     ArrowUpRight, ArrowDownRight, ShoppingBag, DollarSign, TrendingUp, Zap,
     LineChart as LineChartIcon, PieChart as PieChartIcon, BarChart3, Filter,
-    User, Tag, Package, X
+    User, Tag, Package, X, Download
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import IncomeDialog from './IncomeDialog'
@@ -129,6 +129,50 @@ export default function FinancePage() {
         if (data) setClients(data)
     }
 
+    const handleExportCSV = () => {
+        if (!dailyData || dailyData.length === 0) {
+            toast.error('No hay datos para exportar')
+            return
+        }
+
+        const headers = ['Fecha', 'Ingresos', 'Gastos', 'Costo Producción', 'Costo Material', 'Costo Energía', 'Balance', 'Neto Día']
+        const rows = dailyData.map((d: any) => [
+            d.date,
+            d.ingresos,
+            d.gastos,
+            d.costo_total,
+            d.material_cost,
+            d.energy_cost,
+            d.balance,
+            d.net
+        ])
+
+        const csvContent = [
+            // Summary header
+            `Austral Prints 3D - Reporte Financiero`,
+            `Exportado: ${new Date().toLocaleDateString('es-CL')}`,
+            `Período: ${dailyData[0]?.date || ''} a ${dailyData[dailyData.length - 1]?.date || ''}`,
+            '',
+            `Ingresos Totales,${stats.income}`,
+            `Gastos Operativos,${stats.expenses}`,
+            `Costos de Producción,${stats.production_cost}`,
+            `Utilidad Neta,${stats.profit}`,
+            `Balance en Caja,${stats.balance}`,
+            '',
+            headers.join(','),
+            ...rows.map((r: any[]) => r.join(','))
+        ].join('\n')
+
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `austral-finanzas-${new Date().toISOString().split('T')[0]}.csv`
+        link.click()
+        URL.revokeObjectURL(url)
+        toast.success('CSV exportado')
+    }
+
     const fetchDetailedStats = async () => {
         setLoading(true)
 
@@ -213,15 +257,15 @@ export default function FinancePage() {
 
         // Desglose de Costos Directos
         const material_cost = production_cost_orders.reduce((acc, curr) => {
-            // Si no tiene campos técnicos (pedidos antiguos o simples), asumimos que el 90% es material
+            // Si tiene campos técnicos, calcula exacto. Si no, asigna todo a material.
             const plasticCost = curr.quoted_grams && curr.quoted_material_price
                 ? (curr.quoted_grams * ((curr.quoted_material_price || 15000) / 1000) * (curr.quantity || 1))
-                : ((curr.cost || 0) * 0.9);
+                : (curr.cost || 0);
 
             return acc + plasticCost + getAdditionalCostsTotal(curr);
         }, 0)
 
-        const energy_cost = realTotalCost - material_cost
+        const energy_cost = Math.max(0, realTotalCost - material_cost)
 
         const total_grams = production_cost_orders.reduce((acc, curr) => acc + (curr.quoted_grams || 0) * (curr.quantity || 1), 0)
         const total_hours = production_cost_orders.reduce((acc, curr) => {
@@ -383,14 +427,16 @@ export default function FinancePage() {
             const dayProdCost_Total = dayProdCost_Pure + dayAdditionalCost
 
             // Desglose Material vs Energía (Solo sobre el Costo Puro)
+            // Si tiene campos técnicos, calcula exacto. Si no, asigna todo a material
+            // ya que sin datos técnicos no podemos separar energía de manera confiable.
             const dayMaterialCost = orders?.filter(o => (o.date || o.created_at).startsWith(date) && o.status === 'entregado')
                 .reduce((acc, curr) => {
                     if (curr.quoted_grams && curr.quoted_material_price) {
                         return acc + ((curr.quoted_grams * (curr.quoted_material_price / 1000)) * (curr.quantity || 1))
                     }
-                    return acc + ((curr.cost || 0) * 0.9)
+                    return acc + (curr.cost || 0)
                 }, 0) || 0
-            const dayEnergyCost = dayProdCost_Pure - dayMaterialCost
+            const dayEnergyCost = Math.max(0, dayProdCost_Pure - dayMaterialCost)
 
             // 5. Sugerido (Técnico + Adicionales)
             // Regla del usuario: (Costo Directo * 1.5) + Adicionales? 
@@ -591,7 +637,15 @@ export default function FinancePage() {
                 }
 
                 <div className="ml-auto flex items-center gap-2">
-                    <span className="text-xs text-slate-400">Prod: {products.length} | Inv: {inventory.length}</span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportCSV}
+                        className="h-9 text-xs font-bold gap-2"
+                    >
+                        <Download size={14} />
+                        CSV
+                    </Button>
                 </div>
             </div >
 
@@ -1053,7 +1107,7 @@ export default function FinancePage() {
                     <ProductionCostsTab stats={stats} dailyData={dailyData} products={products} inventory={inventory} />
                 </TabsContent>
                 <TabsContent value="reinvestment">
-                    <ReinvestmentPage />
+                    <ReinvestmentPage embedded />
                 </TabsContent>
                 <TabsContent value="valuation">
                     <AssetsTab cashBalance={stats.balance} inventoryValue={inventoryValue} />
