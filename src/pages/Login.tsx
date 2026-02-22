@@ -51,7 +51,7 @@ export default function Login() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
             <Card className="w-full max-w-md shadow-lg border-0 bg-white/90 backdrop-blur">
                 <CardHeader className="text-center space-y-2">
-                    <img src="./logo.png" alt="Austral Prints 3D" className="mx-auto h-20 object-contain mb-4" />
+                    <img src="./LogoOficial.jpg" alt="Austral Prints 3D" className="mx-auto h-24 object-contain mb-4 rounded-lg" />
                     <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">Austral Prints 3D</CardTitle>
                     <CardDescription className="text-slate-500">Gestión de Impresión 3D</CardDescription>
                 </CardHeader>
